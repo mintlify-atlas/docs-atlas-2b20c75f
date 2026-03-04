@@ -1,0 +1,136 @@
+{
+  "projectType": "sdk-library",
+  "projectName": "JoltC",
+  "projectDescription": "A C interface for JoltPhysics, providing high-performance 3D physics simulation capabilities.",
+  "theme": "aspen",
+  "primaryColor": "#94cb04",
+  "lightColor": "#545454",
+  "darkColor": null,
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Core Concepts",
+            "pages": [
+              "core/physics-system",
+              "core/bodies",
+              "core/shapes",
+              "core/collision-detection"
+            ]
+          },
+          {
+            "group": "Guides",
+            "pages": [
+              "guides/creating-bodies",
+              "guides/constraints",
+              "guides/character-controller",
+              "guides/raycasting",
+              "guides/vehicles"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Core",
+            "pages": [
+              "api/initialization",
+              "api/physics-system",
+              "api/job-system"
+            ]
+          },
+          {
+            "group": "Bodies",
+            "pages": [
+              "api/body-interface",
+              "api/body-creation",
+              "api/motion-properties"
+            ]
+          },
+          {
+            "group": "Shapes",
+            "pages": [
+              "api/shapes/convex",
+              "api/shapes/compound",
+              "api/shapes/mesh",
+              "api/shapes/heightfield"
+            ]
+          },
+          {
+            "group": "Collision",
+            "pages": [
+              "api/collision/queries",
+              "api/collision/filters",
+              "api/collision/listeners"
+            ]
+          },
+          {
+            "group": "Constraints",
+            "pages": [
+              "api/constraints/fixed",
+              "api/constraints/distance",
+              "api/constraints/hinge",
+              "api/constraints/slider",
+              "api/constraints/six-dof"
+            ]
+          },
+          {
+            "group": "Character",
+            "pages": [
+              "api/character/character",
+              "api/character/character-virtual"
+            ]
+          },
+          {
+            "group": "Math",
+            "pages": [
+              "api/math/vectors",
+              "api/math/quaternions",
+              "api/math/matrices"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "High-performance 3D physics simulation",
+    "Comprehensive C API for JoltPhysics",
+    "Support for convex and concave collision shapes",
+    "Advanced constraint system with motors and limits",
+    "Character controller for games",
+    "Vehicle physics simulation",
+    "Efficient broad-phase and narrow-phase collision detection",
+    "Cross-platform support (Windows, macOS, Linux)"
+  ],
+  "publicApiSurface": [
+    "JPH_Init",
+    "JPH_Shutdown",
+    "JPH_PhysicsSystem_Create",
+    "JPH_PhysicsSystem_Update",
+    "JPH_BodyInterface_CreateAndAddBody",
+    "JPH_BoxShape_Create",
+    "JPH_SphereShape_Create",
+    "JPH_CapsuleShape_Create",
+    "JPH_ConvexHullShape_Create",
+    "JPH_MeshShape_Create",
+    "JPH_FixedConstraint_Create",
+    "JPH_HingeConstraint_Create",
+    "JPH_Character_Create",
+    "JPH_CharacterVirtual_Create",
+    "JPH_BroadPhaseQuery_CastRay",
+    "JPH_NarrowPhaseQuery_CastRay"
+  ]
+}
