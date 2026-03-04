@@ -1,0 +1,454 @@
+---
+title: Swing-Twist Constraint
+description: API reference for JPH_SwingTwistConstraint - advanced ragdoll joint with separate swing and twist limits
+---
+
+# Swing-Twist Constraint
+
+The `JPH_SwingTwistConstraint` is an advanced constraint designed for ragdoll joints. It decomposes rotation into swing (bending) and twist (rotation around the bone axis) components, allowing independent limits and motor control for each. This provides realistic joint behavior for characters and articulated objects.
+
+## Use Cases
+
+- Ragdoll character joints (shoulders, hips, elbows, knees)
+- Realistic character animations with physics
+- Robotic arm joints with complex limits
+- Articulated machinery with multi-axis rotation
+- Advanced IK (Inverse Kinematics) systems
+
+## Types
+
+### JPH_SwingTwistConstraint
+
+```c
+typedef struct JPH_SwingTwistConstraint JPH_SwingTwistConstraint;
+```
+
+Opaque handle to a swing-twist constraint instance.
+
+### JPH_SwingTwistConstraintSettings
+
+```c
+typedef struct JPH_SwingTwistConstraintSettings {
+    JPH_ConstraintSettings  base;
+    JPH_ConstraintSpace     space;
+    JPH_RVec3               position1;
+    JPH_Vec3                twistAxis1;
+    JPH_Vec3                planeAxis1;
+    JPH_RVec3               position2;
+    JPH_Vec3                twistAxis2;
+    JPH_Vec3                planeAxis2;
+    JPH_SwingType           swingType;
+    float                   normalHalfConeAngle;
+    float                   planeHalfConeAngle;
+    float                   twistMinAngle;
+    float                   twistMaxAngle;
+    float                   maxFrictionTorque;
+    JPH_MotorSettings       swingMotorSettings;
+    JPH_MotorSettings       twistMotorSettings;
+} JPH_SwingTwistConstraintSettings;
+```
+
+Settings structure for creating a swing-twist constraint.
+
+<ParamField path="base" type="JPH_ConstraintSettings">
+  Base constraint settings (enabled, priority, etc.)
+</ParamField>
+
+<ParamField path="space" type="JPH_ConstraintSpace">
+  Coordinate space for the constraint:
+  - `JPH_ConstraintSpace_LocalToBodyCOM`: Local to each body's center of mass
+  - `JPH_ConstraintSpace_WorldSpace`: World space coordinates
+</ParamField>
+
+<ParamField path="position1" type="JPH_RVec3">
+  Joint position on body 1
+</ParamField>
+
+<ParamField path="twistAxis1" type="JPH_Vec3">
+  Twist (bone) axis direction for body 1 (normalized)
+</ParamField>
+
+<ParamField path="planeAxis1" type="JPH_Vec3">
+  Plane axis perpendicular to twist axis for body 1 (normalized)
+</ParamField>
+
+<ParamField path="position2" type="JPH_RVec3">
+  Joint position on body 2
+</ParamField>
+
+<ParamField path="twistAxis2" type="JPH_Vec3">
+  Twist (bone) axis direction for body 2 (normalized)
+</ParamField>
+
+<ParamField path="planeAxis2" type="JPH_Vec3">
+  Plane axis perpendicular to twist axis for body 2 (normalized)
+</ParamField>
+
+<ParamField path="swingType" type="JPH_SwingType">
+  Type of swing limit shape:
+  - `JPH_SwingType_Cone`: Circular cone (same limit in all directions)
+  - `JPH_SwingType_Pyramid`: Elliptical/pyramid shape (different limits for normal and plane)
+</ParamField>
+
+<ParamField path="normalHalfConeAngle" type="float">
+  Half cone angle in the normal direction (radians). For cone type, this is the only swing limit used.
+</ParamField>
+
+<ParamField path="planeHalfConeAngle" type="float">
+  Half cone angle in the plane direction (radians). Only used when `swingType` is `JPH_SwingType_Pyramid`.
+</ParamField>
+
+<ParamField path="twistMinAngle" type="float">
+  Minimum twist angle in radians (rotation around the twist axis)
+</ParamField>
+
+<ParamField path="twistMaxAngle" type="float">
+  Maximum twist angle in radians (rotation around the twist axis)
+</ParamField>
+
+<ParamField path="maxFrictionTorque" type="float">
+  Maximum friction torque applied to the joint (N·m)
+</ParamField>
+
+<ParamField path="swingMotorSettings" type="JPH_MotorSettings">
+  Motor settings for controlling swing (bending) motion
+</ParamField>
+
+<ParamField path="twistMotorSettings" type="JPH_MotorSettings">
+  Motor settings for controlling twist (rotation) motion
+</ParamField>
+
+### JPH_SwingType
+
+```c
+typedef enum JPH_SwingType {
+    JPH_SwingType_Cone,
+    JPH_SwingType_Pyramid,
+} JPH_SwingType;
+```
+
+Defines the shape of the swing limit region.
+
+## Functions
+
+### Settings
+
+#### JPH_SwingTwistConstraintSettings_Init
+
+```c
+void JPH_SwingTwistConstraintSettings_Init(
+    JPH_SwingTwistConstraintSettings* settings
+);
+```
+
+Initializes a swing-twist constraint settings structure with default values.
+
+<ParamField path="settings" type="JPH_SwingTwistConstraintSettings*">
+  Pointer to settings structure to initialize
+</ParamField>
+
+### Creation
+
+#### JPH_SwingTwistConstraint_Create
+
+```c
+JPH_SwingTwistConstraint* JPH_SwingTwistConstraint_Create(
+    const JPH_SwingTwistConstraintSettings* settings,
+    JPH_Body* body1,
+    JPH_Body* body2
+);
+```
+
+Creates a new swing-twist constraint between two bodies.
+
+<ParamField path="settings" type="const JPH_SwingTwistConstraintSettings*">
+  Constraint configuration settings
+</ParamField>
+
+<ParamField path="body1" type="JPH_Body*">
+  First body to constrain (typically parent bone)
+</ParamField>
+
+<ParamField path="body2" type="JPH_Body*">
+  Second body to constrain (typically child bone)
+</ParamField>
+
+<ResponseField name="return" type="JPH_SwingTwistConstraint*">
+  Pointer to the created constraint, or NULL on failure
+</ResponseField>
+
+#### JPH_SwingTwistConstraint_GetSettings
+
+```c
+void JPH_SwingTwistConstraint_GetSettings(
+    JPH_SwingTwistConstraint* constraint,
+    JPH_SwingTwistConstraintSettings* settings
+);
+```
+
+Retrieves the current settings of a swing-twist constraint.
+
+<ParamField path="constraint" type="JPH_SwingTwistConstraint*">
+  The constraint to query
+</ParamField>
+
+<ParamField path="settings" type="JPH_SwingTwistConstraintSettings*">
+  Output structure to receive the settings
+</ParamField>
+
+### Querying State
+
+#### JPH_SwingTwistConstraint_GetNormalHalfConeAngle
+
+```c
+float JPH_SwingTwistConstraint_GetNormalHalfConeAngle(
+    JPH_SwingTwistConstraint* constraint
+);
+```
+
+Gets the current normal half cone angle limit.
+
+<ParamField path="constraint" type="JPH_SwingTwistConstraint*">
+  The constraint to query
+</ParamField>
+
+<ResponseField name="return" type="float">
+  Normal half cone angle in radians
+</ResponseField>
+
+### Diagnostics
+
+#### JPH_SwingTwistConstraint_GetTotalLambdaPosition
+
+```c
+void JPH_SwingTwistConstraint_GetTotalLambdaPosition(
+    const JPH_SwingTwistConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the total positional Lagrange multiplier. This represents the constraint force keeping the bodies connected at the joint position.
+
+<ParamField path="constraint" type="const JPH_SwingTwistConstraint*">
+  The constraint to query
+</ParamField>
+
+<ParamField path="result" type="JPH_Vec3*">
+  Output vector to receive the lambda value (constraint force)
+</ParamField>
+
+#### JPH_SwingTwistConstraint_GetTotalLambdaTwist
+
+```c
+float JPH_SwingTwistConstraint_GetTotalLambdaTwist(
+    const JPH_SwingTwistConstraint* constraint
+);
+```
+
+Gets the Lagrange multiplier for the twist (rotation around bone axis) constraint.
+
+<ParamField path="constraint" type="const JPH_SwingTwistConstraint*">
+  The constraint to query
+</ParamField>
+
+<ResponseField name="return" type="float">
+  Twist constraint torque magnitude
+</ResponseField>
+
+#### JPH_SwingTwistConstraint_GetTotalLambdaSwingY
+
+```c
+float JPH_SwingTwistConstraint_GetTotalLambdaSwingY(
+    const JPH_SwingTwistConstraint* constraint
+);
+```
+
+Gets the Lagrange multiplier for the swing constraint in the Y direction.
+
+<ParamField path="constraint" type="const JPH_SwingTwistConstraint*">
+  The constraint to query
+</ParamField>
+
+<ResponseField name="return" type="float">
+  Y-axis swing constraint torque magnitude
+</ResponseField>
+
+#### JPH_SwingTwistConstraint_GetTotalLambdaSwingZ
+
+```c
+float JPH_SwingTwistConstraint_GetTotalLambdaSwingZ(
+    const JPH_SwingTwistConstraint* constraint
+);
+```
+
+Gets the Lagrange multiplier for the swing constraint in the Z direction.
+
+<ParamField path="constraint" type="const JPH_SwingTwistConstraint*">
+  The constraint to query
+</ParamField>
+
+<ResponseField name="return" type="float">
+  Z-axis swing constraint torque magnitude
+</ResponseField>
+
+#### JPH_SwingTwistConstraint_GetTotalLambdaMotor
+
+```c
+void JPH_SwingTwistConstraint_GetTotalLambdaMotor(
+    const JPH_SwingTwistConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the total motor Lagrange multiplier. This represents the torque applied by the swing and twist motors.
+
+<ParamField path="constraint" type="const JPH_SwingTwistConstraint*">
+  The constraint to query
+</ParamField>
+
+<ParamField path="result" type="JPH_Vec3*">
+  Output vector to receive the motor torque
+</ParamField>
+
+## Example: Ragdoll Shoulder
+
+```c
+// Create a realistic shoulder joint for a ragdoll
+JPH_Body* torso = /* ... torso body ... */;
+JPH_Body* upperArm = /* ... upper arm body ... */;
+
+// Initialize constraint settings
+JPH_SwingTwistConstraintSettings settings;
+JPH_SwingTwistConstraintSettings_Init(&settings);
+
+// Use local space for proper body attachment
+settings.space = JPH_ConstraintSpace_LocalToBodyCOM;
+
+// Shoulder position on torso (right shoulder)
+settings.position1 = (JPH_RVec3){ 0.3f, 0.2f, 0.0f };
+// Arm direction from torso
+settings.twistAxis1 = (JPH_Vec3){ 1.0f, 0.0f, 0.0f };
+// Forward direction
+settings.planeAxis1 = (JPH_Vec3){ 0.0f, 0.0f, 1.0f };
+
+// Top of upper arm
+settings.position2 = (JPH_RVec3){ 0.0f, 0.15f, 0.0f };
+// Arm bone direction
+settings.twistAxis2 = (JPH_Vec3){ 0.0f, -1.0f, 0.0f };
+// Forward direction of arm
+settings.planeAxis2 = (JPH_Vec3){ 0.0f, 0.0f, 1.0f };
+
+// Use pyramid shape for realistic shoulder limits
+settings.swingType = JPH_SwingType_Pyramid;
+
+// Allow 100-degree forward/back swing
+settings.normalHalfConeAngle = 1.745f;  // ~100 degrees in radians
+
+// Allow 60-degree lateral swing
+settings.planeHalfConeAngle = 1.047f;   // ~60 degrees in radians
+
+// Allow 90-degree twist in each direction
+settings.twistMinAngle = -1.571f;  // -90 degrees
+settings.twistMaxAngle = 1.571f;   // +90 degrees
+
+// Add some friction for realistic damping
+settings.maxFrictionTorque = 2.0f;
+
+// Create the constraint
+JPH_SwingTwistConstraint* shoulder = JPH_SwingTwistConstraint_Create(
+    &settings,
+    torso,
+    upperArm
+);
+
+// Add to physics system
+JPH_PhysicsSystem_AddConstraint(physicsSystem, (JPH_Constraint*)shoulder);
+```
+
+## Example: Ragdoll Elbow
+
+```c
+// Create a simple elbow joint with limited bending
+JPH_Body* upperArm = /* ... upper arm body ... */;
+JPH_Body* forearm = /* ... forearm body ... */;
+
+JPH_SwingTwistConstraintSettings settings;
+JPH_SwingTwistConstraintSettings_Init(&settings);
+
+settings.space = JPH_ConstraintSpace_LocalToBodyCOM;
+
+// Elbow position on upper arm
+settings.position1 = (JPH_RVec3){ 0.0f, -0.15f, 0.0f };
+settings.twistAxis1 = (JPH_Vec3){ 0.0f, -1.0f, 0.0f };
+settings.planeAxis1 = (JPH_Vec3){ 1.0f, 0.0f, 0.0f };
+
+// Top of forearm
+settings.position2 = (JPH_RVec3){ 0.0f, 0.12f, 0.0f };
+settings.twistAxis2 = (JPH_Vec3){ 0.0f, 1.0f, 0.0f };
+settings.planeAxis2 = (JPH_Vec3){ 1.0f, 0.0f, 0.0f };
+
+// Elbow only bends in one direction (cone shape is fine)
+settings.swingType = JPH_SwingType_Cone;
+
+// Allow 150-degree bend (0 to 150)
+settings.normalHalfConeAngle = 1.309f;  // ~75 degrees (half of 150)
+
+// Minimal twist (forearm rotation)
+settings.twistMinAngle = -0.349f;  // -20 degrees
+settings.twistMaxAngle = 0.349f;   // +20 degrees
+
+settings.maxFrictionTorque = 1.0f;
+
+JPH_SwingTwistConstraint* elbow = JPH_SwingTwistConstraint_Create(
+    &settings,
+    upperArm,
+    forearm
+);
+
+JPH_PhysicsSystem_AddConstraint(physicsSystem, (JPH_Constraint*)elbow);
+```
+
+## Diagnostics Example
+
+```c
+// Monitor constraint forces and torques
+JPH_Vec3 positionForce;
+JPH_SwingTwistConstraint_GetTotalLambdaPosition(shoulder, &positionForce);
+float positionMagnitude = JPH_Vec3_Length(&positionForce);
+
+float twistTorque = JPH_SwingTwistConstraint_GetTotalLambdaTwist(shoulder);
+float swingYTorque = JPH_SwingTwistConstraint_GetTotalLambdaSwingY(shoulder);
+float swingZTorque = JPH_SwingTwistConstraint_GetTotalLambdaSwingZ(shoulder);
+
+JPH_Vec3 motorTorque;
+JPH_SwingTwistConstraint_GetTotalLambdaMotor(shoulder, &motorTorque);
+
+printf("Shoulder forces:\n");
+printf("  Position: %.2f N\n", positionMagnitude);
+printf("  Twist: %.2f N·m\n", twistTorque);
+printf("  Swing Y: %.2f N·m\n", swingYTorque);
+printf("  Swing Z: %.2f N·m\n", swingZTorque);
+
+// Detect when limits are being hit
+if (twistTorque > 5.0f) {
+    printf("Twist limit active!\n");
+}
+if (swingYTorque > 5.0f || swingZTorque > 5.0f) {
+    printf("Swing limit active!\n");
+}
+```
+
+## Notes
+
+- **Swing vs Twist**: Swing is the bending motion (like nodding your head), while twist is the rotation around the bone axis (like shaking your head "no")
+- **Coordinate Frames**: The twist axis defines the bone direction, and the plane axis must be perpendicular to it
+- **Swing Type**: Use `JPH_SwingType_Cone` for symmetrical limits (like a ball joint), and `JPH_SwingType_Pyramid` for asymmetrical limits (like a shoulder that can move more forward/back than side-to-side)
+- **Motor Settings**: The swing and twist motor settings are stored in the settings structure but motor control functions are not exposed in the current C API
+- **Ragdoll Creation**: For full ragdoll setup, see the Ragdoll API which uses swing-twist constraints internally
+
+## See Also
+
+- [Point Constraint](/api/constraints/point) - Simple ball-and-socket joint
+- [Cone Constraint](/api/constraints/cone) - Simpler angle-limited joint
+- [Hinge Constraint](/api/constraints/hinge) - Single-axis rotation
+- [Six DOF Constraint](/api/constraints/six-dof) - Full 6-axis control

@@ -1,0 +1,306 @@
+---
+title: Point Constraint
+description: API reference for JPH_PointConstraint - connects two bodies at a single point allowing free rotation
+---
+
+# Point Constraint
+
+The `JPH_PointConstraint` creates a point-to-point connection between two bodies, constraining their positions at specific attachment points while allowing free rotation. This is also known as a ball-and-socket joint.
+
+## Use Cases
+
+- Ball-and-socket joints (e.g., shoulder joints)
+- Rope or chain connections
+- Pendulums and swinging objects
+- Ragdoll limb connections
+- Character joint systems
+
+## Types
+
+### JPH_PointConstraint
+
+```c
+typedef struct JPH_PointConstraint JPH_PointConstraint;
+```
+
+Opaque handle to a point constraint instance.
+
+### JPH_PointConstraintSettings
+
+```c
+typedef struct JPH_PointConstraintSettings {
+    JPH_ConstraintSettings  base;
+    JPH_ConstraintSpace     space;
+    JPH_RVec3               point1;
+    JPH_RVec3               point2;
+} JPH_PointConstraintSettings;
+```
+
+Settings structure for creating a point constraint.
+
+<ParamField path="base" type="JPH_ConstraintSettings">
+  Base constraint settings (enabled, priority, etc.)
+</ParamField>
+
+<ParamField path="space" type="JPH_ConstraintSpace">
+  Coordinate space for the constraint points:
+  - `JPH_ConstraintSpace_LocalToBodyCOM`: Local to each body's center of mass
+  - `JPH_ConstraintSpace_WorldSpace`: World space coordinates
+</ParamField>
+
+<ParamField path="point1" type="JPH_RVec3">
+  Attachment point on body 1 (in the specified space)
+</ParamField>
+
+<ParamField path="point2" type="JPH_RVec3">
+  Attachment point on body 2 (in the specified space)
+</ParamField>
+
+## Functions
+
+### Settings
+
+#### JPH_PointConstraintSettings_Init
+
+```c
+void JPH_PointConstraintSettings_Init(JPH_PointConstraintSettings* settings);
+```
+
+Initializes a point constraint settings structure with default values.
+
+<ParamField path="settings" type="JPH_PointConstraintSettings*">
+  Pointer to settings structure to initialize
+</ParamField>
+
+### Creation
+
+#### JPH_PointConstraint_Create
+
+```c
+JPH_PointConstraint* JPH_PointConstraint_Create(
+    const JPH_PointConstraintSettings* settings,
+    JPH_Body* body1,
+    JPH_Body* body2
+);
+```
+
+Creates a new point constraint between two bodies.
+
+<ParamField path="settings" type="const JPH_PointConstraintSettings*">
+  Constraint configuration settings
+</ParamField>
+
+<ParamField path="body1" type="JPH_Body*">
+  First body to constrain
+</ParamField>
+
+<ParamField path="body2" type="JPH_Body*">
+  Second body to constrain
+</ParamField>
+
+<ResponseField name="return" type="JPH_PointConstraint*">
+  Pointer to the created constraint, or NULL on failure
+</ResponseField>
+
+#### JPH_PointConstraint_GetSettings
+
+```c
+void JPH_PointConstraint_GetSettings(
+    const JPH_PointConstraint* constraint,
+    JPH_PointConstraintSettings* settings
+);
+```
+
+Retrieves the current settings of a point constraint.
+
+<ParamField path="constraint" type="const JPH_PointConstraint*">
+  The constraint to query
+</ParamField>
+
+<ParamField path="settings" type="JPH_PointConstraintSettings*">
+  Output structure to receive the settings
+</ParamField>
+
+### Control
+
+#### JPH_PointConstraint_SetPoint1
+
+```c
+void JPH_PointConstraint_SetPoint1(
+    JPH_PointConstraint* constraint,
+    JPH_ConstraintSpace space,
+    JPH_RVec3* value
+);
+```
+
+Sets the attachment point on body 1.
+
+<ParamField path="constraint" type="JPH_PointConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="space" type="JPH_ConstraintSpace">
+  Coordinate space of the point value
+</ParamField>
+
+<ParamField path="value" type="JPH_RVec3*">
+  New attachment point position
+</ParamField>
+
+#### JPH_PointConstraint_SetPoint2
+
+```c
+void JPH_PointConstraint_SetPoint2(
+    JPH_PointConstraint* constraint,
+    JPH_ConstraintSpace space,
+    JPH_RVec3* value
+);
+```
+
+Sets the attachment point on body 2.
+
+<ParamField path="constraint" type="JPH_PointConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="space" type="JPH_ConstraintSpace">
+  Coordinate space of the point value
+</ParamField>
+
+<ParamField path="value" type="JPH_RVec3*">
+  New attachment point position
+</ParamField>
+
+### Querying State
+
+#### JPH_PointConstraint_GetLocalSpacePoint1
+
+```c
+void JPH_PointConstraint_GetLocalSpacePoint1(
+    const JPH_PointConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the attachment point on body 1 in local space.
+
+<ParamField path="constraint" type="const JPH_PointConstraint*">
+  The constraint to query
+</ParamField>
+
+<ParamField path="result" type="JPH_Vec3*">
+  Output vector to receive the point position
+</ParamField>
+
+#### JPH_PointConstraint_GetLocalSpacePoint2
+
+```c
+void JPH_PointConstraint_GetLocalSpacePoint2(
+    const JPH_PointConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the attachment point on body 2 in local space.
+
+<ParamField path="constraint" type="const JPH_PointConstraint*">
+  The constraint to query
+</ParamField>
+
+<ParamField path="result" type="JPH_Vec3*">
+  Output vector to receive the point position
+</ParamField>
+
+### Diagnostics
+
+#### JPH_PointConstraint_GetTotalLambdaPosition
+
+```c
+void JPH_PointConstraint_GetTotalLambdaPosition(
+    const JPH_PointConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the total positional Lagrange multiplier applied by the constraint. This represents the constraint force that was applied in the last simulation step to keep the bodies connected.
+
+<ParamField path="constraint" type="const JPH_PointConstraint*">
+  The constraint to query
+</ParamField>
+
+<ParamField path="result" type="JPH_Vec3*">
+  Output vector to receive the lambda value (constraint force)
+</ParamField>
+
+## Example
+
+```c
+// Create a pendulum using a point constraint
+JPH_Body* anchor = /* ... static body at ceiling ... */;
+JPH_Body* weight = /* ... dynamic sphere body ... */;
+
+// Initialize constraint settings
+JPH_PointConstraintSettings settings;
+JPH_PointConstraintSettings_Init(&settings);
+
+// Configure the constraint
+settings.space = JPH_ConstraintSpace_WorldSpace;
+settings.point1 = (JPH_RVec3){ 0, 5, 0 };  // Ceiling attachment
+settings.point2 = (JPH_RVec3){ 0, 5, 0 };  // Weight attachment (same point)
+
+// Create the constraint
+JPH_PointConstraint* constraint = JPH_PointConstraint_Create(
+    &settings,
+    anchor,
+    weight
+);
+
+// Add to physics system
+JPH_PhysicsSystem_AddConstraint(physicsSystem, (JPH_Constraint*)constraint);
+
+// Later: Query constraint force
+JPH_Vec3 force;
+JPH_PointConstraint_GetTotalLambdaPosition(constraint, &force);
+float tensionMagnitude = JPH_Vec3_Length(&force);
+printf("Rope tension: %f N\n", tensionMagnitude);
+```
+
+## Advanced Example: Ragdoll Shoulder
+
+```c
+// Create a ball-and-socket shoulder joint
+JPH_Body* torso = /* ... torso body ... */;
+JPH_Body* upperArm = /* ... upper arm body ... */;
+
+// Initialize constraint
+JPH_PointConstraintSettings settings;
+JPH_PointConstraintSettings_Init(&settings);
+
+// Use local space for proper attachment
+settings.space = JPH_ConstraintSpace_LocalToBodyCOM;
+
+// Shoulder position relative to torso center of mass
+settings.point1 = (JPH_RVec3){ 0.3f, 0.2f, 0.0f };
+
+// Top of upper arm relative to its center of mass  
+settings.point2 = (JPH_RVec3){ 0.0f, 0.15f, 0.0f };
+
+// Create and add constraint
+JPH_PointConstraint* shoulder = JPH_PointConstraint_Create(
+    &settings,
+    torso,
+    upperArm
+);
+
+JPH_PhysicsSystem_AddConstraint(physicsSystem, (JPH_Constraint*)shoulder);
+
+// The arm can now rotate freely at the shoulder point
+// For more realistic behavior, combine with a cone constraint
+```
+
+## See Also
+
+- [Distance Constraint](/api/constraints/distance) - Maintains distance between bodies
+- [Cone Constraint](/api/constraints/cone) - Point constraint with angle limits
+- [Swing-Twist Constraint](/api/constraints/swing-twist) - Advanced ragdoll joint
+- [Fixed Constraint](/api/constraints/fixed) - Rigid connection

@@ -1,0 +1,315 @@
+---
+title: Cone Constraint
+description: API reference for JPH_ConeConstraint - limits rotation to within a cone angle
+---
+
+# Cone Constraint
+
+The `JPH_ConeConstraint` constrains two bodies at a point while limiting the rotation angle between their twist axes to stay within a cone. This is useful for joints that need angular limits, like a shoulder joint or a camera gimbal.
+
+## Use Cases
+
+- Shoulder joints with rotation limits
+- Camera gimbals with pitch/yaw constraints
+- Limited ball-and-socket joints
+- Robotic arm joints with angle restrictions
+- Character joint systems with movement limits
+
+## Types
+
+### JPH_ConeConstraint
+
+```c
+typedef struct JPH_ConeConstraint JPH_ConeConstraint;
+```
+
+Opaque handle to a cone constraint instance.
+
+### JPH_ConeConstraintSettings
+
+```c
+typedef struct JPH_ConeConstraintSettings {
+    JPH_ConstraintSettings  base;
+    JPH_ConstraintSpace     space;
+    JPH_RVec3               point1;
+    JPH_Vec3                twistAxis1;
+    JPH_RVec3               point2;
+    JPH_Vec3                twistAxis2;
+    float                   halfConeAngle;
+} JPH_ConeConstraintSettings;
+```
+
+Settings structure for creating a cone constraint.
+
+<ParamField path="base" type="JPH_ConstraintSettings">
+  Base constraint settings (enabled, priority, etc.)
+</ParamField>
+
+<ParamField path="space" type="JPH_ConstraintSpace">
+  Coordinate space for the constraint points and axes:
+  - `JPH_ConstraintSpace_LocalToBodyCOM`: Local to each body's center of mass
+  - `JPH_ConstraintSpace_WorldSpace`: World space coordinates
+</ParamField>
+
+<ParamField path="point1" type="JPH_RVec3">
+  Attachment point on body 1
+</ParamField>
+
+<ParamField path="twistAxis1" type="JPH_Vec3">
+  Twist axis direction for body 1 (normalized). This axis must stay within the cone.
+</ParamField>
+
+<ParamField path="point2" type="JPH_RVec3">
+  Attachment point on body 2
+</ParamField>
+
+<ParamField path="twistAxis2" type="JPH_Vec3">
+  Twist axis direction for body 2 (normalized). This is the cone's central axis.
+</ParamField>
+
+<ParamField path="halfConeAngle" type="float">
+  Half cone angle in radians. The twist axes can deviate by this angle. Range: 0 to π.
+</ParamField>
+
+## Functions
+
+### Settings
+
+#### JPH_ConeConstraintSettings_Init
+
+```c
+void JPH_ConeConstraintSettings_Init(JPH_ConeConstraintSettings* settings);
+```
+
+Initializes a cone constraint settings structure with default values.
+
+<ParamField path="settings" type="JPH_ConeConstraintSettings*">
+  Pointer to settings structure to initialize
+</ParamField>
+
+### Creation
+
+#### JPH_ConeConstraint_Create
+
+```c
+JPH_ConeConstraint* JPH_ConeConstraint_Create(
+    const JPH_ConeConstraintSettings* settings,
+    JPH_Body* body1,
+    JPH_Body* body2
+);
+```
+
+Creates a new cone constraint between two bodies.
+
+<ParamField path="settings" type="const JPH_ConeConstraintSettings*">
+  Constraint configuration settings
+</ParamField>
+
+<ParamField path="body1" type="JPH_Body*">
+  First body to constrain
+</ParamField>
+
+<ParamField path="body2" type="JPH_Body*">
+  Second body to constrain
+</ParamField>
+
+<ResponseField name="return" type="JPH_ConeConstraint*">
+  Pointer to the created constraint, or NULL on failure
+</ResponseField>
+
+#### JPH_ConeConstraint_GetSettings
+
+```c
+void JPH_ConeConstraint_GetSettings(
+    JPH_ConeConstraint* constraint,
+    JPH_ConeConstraintSettings* settings
+);
+```
+
+Retrieves the current settings of a cone constraint.
+
+<ParamField path="constraint" type="JPH_ConeConstraint*">
+  The constraint to query
+</ParamField>
+
+<ParamField path="settings" type="JPH_ConeConstraintSettings*">
+  Output structure to receive the settings
+</ParamField>
+
+### Control
+
+#### JPH_ConeConstraint_SetHalfConeAngle
+
+```c
+void JPH_ConeConstraint_SetHalfConeAngle(
+    JPH_ConeConstraint* constraint,
+    float halfConeAngle
+);
+```
+
+Sets the half cone angle limit.
+
+<ParamField path="constraint" type="JPH_ConeConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="halfConeAngle" type="float">
+  New half cone angle in radians (0 to π)
+</ParamField>
+
+#### JPH_ConeConstraint_GetCosHalfConeAngle
+
+```c
+float JPH_ConeConstraint_GetCosHalfConeAngle(
+    const JPH_ConeConstraint* constraint
+);
+```
+
+Gets the cosine of the half cone angle. This is the internal representation used for efficient calculations.
+
+<ParamField path="constraint" type="const JPH_ConeConstraint*">
+  The constraint to query
+</ParamField>
+
+<ResponseField name="return" type="float">
+  Cosine of the half cone angle
+</ResponseField>
+
+### Diagnostics
+
+#### JPH_ConeConstraint_GetTotalLambdaPosition
+
+```c
+void JPH_ConeConstraint_GetTotalLambdaPosition(
+    const JPH_ConeConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the total positional Lagrange multiplier applied by the constraint. This represents the constraint force that keeps the bodies connected at the attachment point.
+
+<ParamField path="constraint" type="const JPH_ConeConstraint*">
+  The constraint to query
+</ParamField>
+
+<ParamField path="result" type="JPH_Vec3*">
+  Output vector to receive the lambda value (constraint force)
+</ParamField>
+
+#### JPH_ConeConstraint_GetTotalLambdaRotation
+
+```c
+float JPH_ConeConstraint_GetTotalLambdaRotation(
+    const JPH_ConeConstraint* constraint
+);
+```
+
+Gets the total rotational Lagrange multiplier applied by the constraint. This represents the torque applied to enforce the cone angle limit.
+
+<ParamField path="constraint" type="const JPH_ConeConstraint*">
+  The constraint to query
+</ParamField>
+
+<ResponseField name="return" type="float">
+  Constraint torque magnitude
+</ResponseField>
+
+## Example
+
+```c
+// Create a limited shoulder joint
+JPH_Body* torso = /* ... torso body ... */;
+JPH_Body* upperArm = /* ... upper arm body ... */;
+
+// Initialize constraint settings
+JPH_ConeConstraintSettings settings;
+JPH_ConeConstraintSettings_Init(&settings);
+
+// Configure the constraint
+settings.space = JPH_ConstraintSpace_LocalToBodyCOM;
+
+// Shoulder position on torso
+settings.point1 = (JPH_RVec3){ 0.3f, 0.2f, 0.0f };
+// Arm bone direction from torso
+settings.twistAxis1 = (JPH_Vec3){ 1.0f, 0.0f, 0.0f };
+
+// Top of upper arm
+settings.point2 = (JPH_RVec3){ 0.0f, 0.15f, 0.0f };
+// Arm bone direction
+settings.twistAxis2 = (JPH_Vec3){ 0.0f, -1.0f, 0.0f };
+
+// Allow 90-degree cone (π/2 radians)
+settings.halfConeAngle = 1.57079632679f;  // π/2
+
+// Create the constraint
+JPH_ConeConstraint* shoulder = JPH_ConeConstraint_Create(
+    &settings,
+    torso,
+    upperArm
+);
+
+// Add to physics system
+JPH_PhysicsSystem_AddConstraint(physicsSystem, (JPH_Constraint*)shoulder);
+
+// The arm can now rotate within a 90-degree cone
+```
+
+## Advanced Example: Camera Gimbal
+
+```c
+// Create a camera gimbal with limited rotation
+JPH_Body* cameraMount = /* ... static mount ... */;
+JPH_Body* camera = /* ... camera body ... */;
+
+// Initialize constraint
+JPH_ConeConstraintSettings settings;
+JPH_ConeConstraintSettings_Init(&settings);
+
+settings.space = JPH_ConstraintSpace_WorldSpace;
+settings.point1 = (JPH_RVec3){ 0, 2, 0 };     // Mount point
+settings.point2 = (JPH_RVec3){ 0, 2, 0 };     // Camera pivot
+
+// Camera forward direction
+settings.twistAxis1 = (JPH_Vec3){ 0, 0, -1 };
+// Mount reference direction (straight down)
+settings.twistAxis2 = (JPH_Vec3){ 0, -1, 0 };
+
+// Allow 60-degree cone for camera movement
+settings.halfConeAngle = 1.0472f;  // π/3 radians (60 degrees)
+
+// Create constraint
+JPH_ConeConstraint* gimbal = JPH_ConeConstraint_Create(
+    &settings,
+    cameraMount,
+    camera
+);
+
+JPH_PhysicsSystem_AddConstraint(physicsSystem, (JPH_Constraint*)gimbal);
+
+// Dynamically adjust the cone angle
+JPH_ConeConstraint_SetHalfConeAngle(gimbal, 0.7854f);  // Reduce to 45 degrees
+
+// Query constraint forces
+JPH_Vec3 force;
+JPH_ConeConstraint_GetTotalLambdaPosition(gimbal, &force);
+
+float torque = JPH_ConeConstraint_GetTotalLambdaRotation(gimbal);
+if (torque > 10.0f) {
+    printf("Camera hitting rotation limit!\n");
+}
+```
+
+## Notes
+
+- The half cone angle can be changed at runtime using `JPH_ConeConstraint_SetHalfConeAngle`
+- A half cone angle of 0 creates a fixed orientation (no rotation allowed)
+- A half cone angle of π allows full rotation
+- The twist axes should be normalized vectors
+- For more complex joint behavior, consider using `JPH_SwingTwistConstraint` which provides separate swing and twist limits
+
+## See Also
+
+- [Point Constraint](/api/constraints/point) - Point connection without rotation limits
+- [Swing-Twist Constraint](/api/constraints/swing-twist) - Separate swing and twist angle limits
+- [Hinge Constraint](/api/constraints/hinge) - Single-axis rotation
+- [Fixed Constraint](/api/constraints/fixed) - Rigid connection
