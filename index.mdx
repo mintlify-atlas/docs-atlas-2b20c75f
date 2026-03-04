@@ -1,97 +1,245 @@
 ---
-title: "Introduction"
-description: "Welcome to the new home for your documentation"
+title: "JoltC Documentation"
+description: "High-performance 3D physics simulation with a comprehensive C API"
+mode: "custom"
 ---
 
-## Setting up
+<div className="relative overflow-hidden bg-gradient-to-b from-[#0f1117] via-[#1a1d27] to-[#0f1117] dark:bg-gradient-to-b dark:from-[#0f1117] dark:via-[#1a1d27] dark:to-[#0f1117] py-20 px-4">
+  <div className="max-w-6xl mx-auto">
+    <div className="text-center">
+      <h1 className="text-5xl md:text-6xl font-bold text-gray-100 dark:text-gray-100 mb-6">
+        JoltC Physics Engine
+      </h1>
+      <p className="text-xl text-gray-400 dark:text-gray-400 max-w-2xl mx-auto mb-8">
+        A comprehensive C interface for JoltPhysics, bringing high-performance 3D physics simulation to your applications with a clean, production-ready API.
+      </p>
+      <div className="flex flex-wrap gap-4 justify-center items-center">
+        <a 
+          href="/quickstart" 
+          className="inline-flex items-center px-6 py-3 rounded-lg bg-[#94cb04] text-gray-900 font-semibold hover:bg-[#a8df05] transition-colors no-underline"
+        >
+          Get Started
+        </a>
+        <a 
+          href="/api/initialization" 
+          className="inline-flex items-center px-6 py-3 rounded-lg border border-gray-600 bg-gray-800/30 dark:border-gray-600 dark:bg-gray-800/30 text-gray-100 dark:text-gray-100 font-semibold hover:border-[#94cb04] dark:hover:border-[#94cb04] hover:bg-gray-800/50 dark:hover:bg-gray-800/50 transition-colors no-underline"
+        >
+          API Reference
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
 
-Get your documentation site up and running in minutes.
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+    Quick Start
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Get up and running with JoltC in minutes
+  </p>
+  
+  <Steps>
+    <Step title="Install JoltC">
+      Build JoltC from source using CMake. The library supports both static and shared builds.
+      
+      ```bash
+      git clone https://github.com/amerkoleci/joltc.git
+      cd joltc
+      mkdir build && cd build
+      cmake ..
+      cmake --build .
+      ```
+    </Step>
+    
+    <Step title="Initialize the Physics System">
+      Set up the physics system with your collision layers and job system.
+      
+      ```c
+      #include "joltc.h"
 
-<Card
-  title="Start here"
-  icon="rocket"
-  href="/quickstart"
-  horizontal
->
-  Follow our three step quickstart guide.
-</Card>
+      // Initialize Jolt
+      JPH_Init();
 
-## Make it yours
+      // Create job system for multi-threading
+      JPH_JobSystem* jobSystem = JPH_JobSystemThreadPool_Create(NULL);
 
-Design a docs site that looks great and empowers your users.
+      // Set up collision filtering
+      JPH_ObjectLayerPairFilter* objectFilter = JPH_ObjectLayerPairFilterTable_Create(2);
+      JPH_BroadPhaseLayerInterface* broadPhaseInterface = JPH_BroadPhaseLayerInterfaceTable_Create(2, 2);
+      
+      // Create physics system
+      JPH_PhysicsSystemSettings settings = {
+          .maxBodies = 65536,
+          .broadPhaseLayerInterface = broadPhaseInterface,
+          .objectLayerPairFilter = objectFilter
+      };
+      JPH_PhysicsSystem* system = JPH_PhysicsSystem_Create(&settings);
+      ```
+    </Step>
+    
+    <Step title="Create Your First Body">
+      Add a dynamic sphere that responds to gravity.
+      
+      ```c
+      // Get the body interface
+      JPH_BodyInterface* bodyInterface = JPH_PhysicsSystem_GetBodyInterface(system);
 
-<Columns cols={2}>
-  <Card
-    title="Edit locally"
-    icon="pen-to-square"
-    href="/development"
-  >
-    Edit your docs locally and preview them in real time.
-  </Card>
-  <Card
-    title="Customize your site"
-    icon="palette"
-    href="/essentials/settings"
-  >
-    Customize the design and colors of your site to match your brand.
-  </Card>
-    <Card
-    title="Set up navigation"
-    icon="map"
-    href="/essentials/navigation"
-  >
-    Organize your docs to help users find what they need and succeed with your product.
-  </Card>
-  <Card
-    title="API documentation"
-    icon="terminal"
-    href="/api-reference/introduction"
-  >
-    Auto-generate API documentation from OpenAPI specifications.
-  </Card>
-</Columns>
+      // Create a sphere shape
+      JPH_SphereShape* sphere = JPH_SphereShape_Create(0.5f);
 
-## Create beautiful pages
+      // Set initial position
+      JPH_Vec3 position = { 0.0f, 10.0f, 0.0f };
 
-Everything you need to create world-class documentation.
+      // Create body settings
+      JPH_BodyCreationSettings* bodySettings = JPH_BodyCreationSettings_Create3(
+          (JPH_Shape*)sphere,
+          &position,
+          NULL, // Identity rotation
+          JPH_MotionType_Dynamic,
+          LAYER_MOVING
+      );
 
-<Columns cols={2}>
-  <Card
-    title="Write with MDX"
-    icon="pen-fancy"
-    href="/essentials/markdown"
-  >
-    Use MDX to style your docs pages.
-  </Card>
-  <Card
-    title="Code samples"
-    icon="code"
-    href="/essentials/code"
-  >
-    Add sample code to demonstrate how to use your product.
-  </Card>
-  <Card
-    title="Images"
-    icon="image"
-    href="/essentials/images"
-  >
-    Display images and other media.
-  </Card>
-  <Card
-    title="Reusable snippets"
-    icon="recycle"
-    href="/essentials/reusable-snippets"
-  >
-    Write once and reuse across your docs.
-  </Card>
-</Columns>
+      // Add body to the world
+      JPH_BodyID bodyId = JPH_BodyInterface_CreateAndAddBody(
+          bodyInterface, 
+          bodySettings, 
+          JPH_Activation_Activate
+      );
+      
+      JPH_BodyCreationSettings_Destroy(bodySettings);
+      ```
+      
+      <Note>
+        The body is now part of your physics simulation and will fall under gravity!
+      </Note>
+    </Step>
+    
+    <Step title="Run the Simulation">
+      Update the physics world each frame.
+      
+      ```c
+      const float deltaTime = 1.0f / 60.0f; // 60 FPS
+      const int collisionSteps = 1;
 
-## Need inspiration?
+      // Simulate one step
+      JPH_PhysicsSystem_Update(system, deltaTime, collisionSteps, jobSystem);
 
-<Card
-  title="See complete examples"
-  icon="stars"
-  href="https://mintlify.com/customers"
->
-  Browse our showcase of exceptional documentation sites.
-</Card>
+      // Get the updated position
+      JPH_RVec3 newPosition;
+      JPH_BodyInterface_GetPosition(bodyInterface, bodyId, &newPosition);
+      printf("Position: (%f, %f, %f)\n", newPosition.x, newPosition.y, newPosition.z);
+      ```
+      
+      <Tip>
+        For more complex simulations, check out the [Physics System guide](/core/physics-system).
+      </Tip>
+    </Step>
+  </Steps>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+    Explore by Topic
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Deep dive into specific areas of the physics engine
+  </p>
+  
+  <CardGroup cols={2}>
+    <Card title="Physics System" icon="atom" href="/core/physics-system">
+      Learn how to configure and manage the core physics simulation
+    </Card>
+    <Card title="Shapes" icon="cube" href="/core/shapes">
+      Understand collision shapes from simple primitives to complex meshes
+    </Card>
+    <Card title="Bodies" icon="circle" href="/core/bodies">
+      Create and control static, kinematic, and dynamic rigid bodies
+    </Card>
+    <Card title="Constraints" icon="link" href="/guides/constraints">
+      Connect bodies with hinges, sliders, and other joint types
+    </Card>
+    <Card title="Character Controller" icon="person-running" href="/guides/character-controller">
+      Implement player movement with built-in character physics
+    </Card>
+    <Card title="Raycasting" icon="radar" href="/guides/raycasting">
+      Query the physics world with rays and shape casts
+    </Card>
+  </CardGroup>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+    Key Features
+  </h2>
+  <p className="text-base text-gray-600 dark:text-gray-400 mb-8">
+    Everything you need for production-quality physics simulation
+  </p>
+  
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <div className="p-6 rounded-2xl border border-gray-200 dark:border-[#27272a] bg-gray-50 dark:bg-[#1a1d27]">
+      <div className="text-[#94cb04] mb-3">
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">High Performance</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Optimized C++ engine with efficient broad-phase and narrow-phase collision detection. Supports thousands of active bodies.
+      </p>
+    </div>
+    
+    <div className="p-6 rounded-2xl border border-gray-200 dark:border-[#27272a] bg-gray-50 dark:bg-[#1a1d27]">
+      <div className="text-[#94cb04] mb-3">
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 5a1 1 0 011-1h14a1 1 0 011 1v2a1 1 0 01-1 1H5a1 1 0 01-1-1V5zM4 13a1 1 0 011-1h6a1 1 0 011 1v6a1 1 0 01-1 1H5a1 1 0 01-1-1v-6zM16 13a1 1 0 011-1h2a1 1 0 011 1v6a1 1 0 01-1 1h-2a1 1 0 01-1-1v-6z" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Rich Shape Library</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Convex shapes, compound shapes, triangle meshes, and heightfields. Mix and match to create complex collision geometry.
+      </p>
+    </div>
+    
+    <div className="p-6 rounded-2xl border border-gray-200 dark:border-[#27272a] bg-gray-50 dark:bg-[#1a1d27]">
+      <div className="text-[#94cb04] mb-3">
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Advanced Constraints</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Fixed, hinge, slider, distance, cone, swing-twist, and 6-DOF constraints. Full motor and limit support.
+      </p>
+    </div>
+    
+    <div className="p-6 rounded-2xl border border-gray-200 dark:border-[#27272a] bg-gray-50 dark:bg-[#1a1d27]">
+      <div className="text-[#94cb04] mb-3">
+        <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3.055 11H5a2 2 0 012 2v1a2 2 0 002 2 2 2 0 012 2v2.945M8 3.935V5.5A2.5 2.5 0 0010.5 8h.5a2 2 0 012 2 2 2 0 104 0 2 2 0 012-2h1.064M15 20.488V18a2 2 0 012-2h3.064M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+      </div>
+      <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">Cross-Platform</h3>
+      <p className="text-sm text-gray-600 dark:text-gray-400">
+        Runs on Windows, macOS, Linux, iOS, and WebAssembly. Single codebase for all platforms.
+      </p>
+    </div>
+  </div>
+</div>
+
+<div className="mt-16 mb-16 max-w-5xl mx-auto px-6">
+  <div className="p-8 rounded-2xl border border-gray-200 dark:border-[#27272a] bg-gradient-to-br from-gray-50 to-white dark:from-[#1a1d27] dark:to-[#0f1117]">
+    <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-3">
+      Ready to Build?
+    </h2>
+    <p className="text-base text-gray-600 dark:text-gray-400 mb-6">
+      Start integrating high-performance physics into your application today.
+    </p>
+    <a 
+      href="/installation" 
+      className="inline-flex items-center px-6 py-3 rounded-lg bg-[#94cb04] text-gray-900 font-semibold hover:bg-[#a8df05] transition-colors no-underline"
+    >
+      Install JoltC
+    </a>
+  </div>
+</div>

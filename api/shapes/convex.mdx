@@ -1,0 +1,587 @@
+---
+title: Convex Shapes
+description: API reference for JoltC convex shape creation functions
+---
+
+Convex shapes are the most common collision shapes in physics simulations. They include spheres, boxes, capsules, cylinders, and convex hulls.
+
+## Sphere Shape
+
+A sphere is the simplest convex shape, defined by a single radius.
+
+### JPH_SphereShape_Create
+
+Creates a sphere shape.
+
+```c
+JPH_SphereShape* JPH_SphereShape_Create(float radius);
+```
+
+<ParamField path="radius" type="float">
+  The radius of the sphere in meters
+</ParamField>
+
+**Returns:** A pointer to the created sphere shape
+
+**Example:**
+```c
+JPH_SphereShape* sphere = JPH_SphereShape_Create(0.5f);
+```
+
+### JPH_SphereShape_GetRadius
+
+Gets the radius of a sphere shape.
+
+```c
+float JPH_SphereShape_GetRadius(const JPH_SphereShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_SphereShape*">
+  The sphere shape
+</ParamField>
+
+**Returns:** The radius of the sphere
+
+## Box Shape
+
+A box is defined by its half extents (half width, half height, half depth) and an optional convex radius.
+
+### JPH_BoxShape_Create
+
+Creates a box shape.
+
+```c
+JPH_BoxShape* JPH_BoxShape_Create(const JPH_Vec3* halfExtent, float convexRadius);
+```
+
+<ParamField path="halfExtent" type="const JPH_Vec3*">
+  Half extents of the box (half width, half height, half depth)
+</ParamField>
+
+<ParamField path="convexRadius" type="float">
+  Convex radius for collision detection optimization. Use `JPH_DEFAULT_CONVEX_RADIUS` (0.05) as default
+</ParamField>
+
+**Returns:** A pointer to the created box shape
+
+**Example:**
+```c
+JPH_Vec3 halfExtent = { 1.0f, 0.5f, 0.25f };
+JPH_BoxShape* box = JPH_BoxShape_Create(&halfExtent, JPH_DEFAULT_CONVEX_RADIUS);
+```
+
+### JPH_BoxShape_GetHalfExtent
+
+Gets the half extents of a box shape.
+
+```c
+void JPH_BoxShape_GetHalfExtent(const JPH_BoxShape* shape, JPH_Vec3* halfExtent);
+```
+
+<ParamField path="shape" type="const JPH_BoxShape*">
+  The box shape
+</ParamField>
+
+<ParamField path="halfExtent" type="JPH_Vec3*">
+  Output parameter for the half extents
+</ParamField>
+
+### JPH_BoxShape_GetConvexRadius
+
+Gets the convex radius of a box shape.
+
+```c
+float JPH_BoxShape_GetConvexRadius(const JPH_BoxShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_BoxShape*">
+  The box shape
+</ParamField>
+
+**Returns:** The convex radius
+
+## Capsule Shape
+
+A capsule is a cylinder with hemispherical caps on both ends.
+
+### JPH_CapsuleShape_Create
+
+Creates a capsule shape.
+
+```c
+JPH_CapsuleShape* JPH_CapsuleShape_Create(float halfHeightOfCylinder, float radius);
+```
+
+<ParamField path="halfHeightOfCylinder" type="float">
+  Half height of the cylindrical portion (not including the hemisphere caps)
+</ParamField>
+
+<ParamField path="radius" type="float">
+  Radius of the capsule
+</ParamField>
+
+**Returns:** A pointer to the created capsule shape
+
+**Example:**
+```c
+JPH_CapsuleShape* capsule = JPH_CapsuleShape_Create(1.0f, 0.3f);
+```
+
+### JPH_CapsuleShape_GetRadius
+
+Gets the radius of a capsule shape.
+
+```c
+float JPH_CapsuleShape_GetRadius(const JPH_CapsuleShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_CapsuleShape*">
+  The capsule shape
+</ParamField>
+
+**Returns:** The radius of the capsule
+
+### JPH_CapsuleShape_GetHalfHeightOfCylinder
+
+Gets the half height of the cylindrical portion.
+
+```c
+float JPH_CapsuleShape_GetHalfHeightOfCylinder(const JPH_CapsuleShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_CapsuleShape*">
+  The capsule shape
+</ParamField>
+
+**Returns:** The half height of the cylindrical portion
+
+## Cylinder Shape
+
+A cylinder with flat top and bottom.
+
+### JPH_CylinderShape_Create
+
+Creates a cylinder shape.
+
+```c
+JPH_CylinderShape* JPH_CylinderShape_Create(float halfHeight, float radius);
+```
+
+<ParamField path="halfHeight" type="float">
+  Half height of the cylinder
+</ParamField>
+
+<ParamField path="radius" type="float">
+  Radius of the cylinder
+</ParamField>
+
+**Returns:** A pointer to the created cylinder shape
+
+**Example:**
+```c
+JPH_CylinderShape* cylinder = JPH_CylinderShape_Create(1.5f, 0.5f);
+```
+
+### JPH_CylinderShape_GetRadius
+
+Gets the radius of a cylinder shape.
+
+```c
+float JPH_CylinderShape_GetRadius(const JPH_CylinderShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_CylinderShape*">
+  The cylinder shape
+</ParamField>
+
+**Returns:** The radius of the cylinder
+
+### JPH_CylinderShape_GetHalfHeight
+
+Gets the half height of a cylinder shape.
+
+```c
+float JPH_CylinderShape_GetHalfHeight(const JPH_CylinderShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_CylinderShape*">
+  The cylinder shape
+</ParamField>
+
+**Returns:** The half height of the cylinder
+
+## Tapered Capsule Shape
+
+A capsule with different radii at top and bottom.
+
+### JPH_TaperedCapsuleShape_Create
+
+Creates a tapered capsule shape from settings.
+
+```c
+JPH_TaperedCapsuleShape* JPH_TaperedCapsuleShapeSettings_CreateShape(
+    JPH_TaperedCapsuleShapeSettings* settings
+);
+```
+
+<ParamField path="settings" type="JPH_TaperedCapsuleShapeSettings*">
+  Shape settings created with `JPH_TaperedCapsuleShapeSettings_Create`
+</ParamField>
+
+**Returns:** A pointer to the created tapered capsule shape
+
+### JPH_TaperedCapsuleShapeSettings_Create
+
+Creates tapered capsule shape settings.
+
+```c
+JPH_TaperedCapsuleShapeSettings* JPH_TaperedCapsuleShapeSettings_Create(
+    float halfHeightOfTaperedCylinder,
+    float topRadius,
+    float bottomRadius
+);
+```
+
+<ParamField path="halfHeightOfTaperedCylinder" type="float">
+  Half height of the tapered cylindrical portion
+</ParamField>
+
+<ParamField path="topRadius" type="float">
+  Radius at the top of the capsule
+</ParamField>
+
+<ParamField path="bottomRadius" type="float">
+  Radius at the bottom of the capsule
+</ParamField>
+
+**Returns:** Shape settings for a tapered capsule
+
+**Example:**
+```c
+JPH_TaperedCapsuleShapeSettings* settings = 
+    JPH_TaperedCapsuleShapeSettings_Create(1.0f, 0.5f, 0.3f);
+JPH_TaperedCapsuleShape* shape = JPH_TaperedCapsuleShapeSettings_CreateShape(settings);
+```
+
+### JPH_TaperedCapsuleShape_GetTopRadius
+
+Gets the top radius.
+
+```c
+float JPH_TaperedCapsuleShape_GetTopRadius(const JPH_TaperedCapsuleShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_TaperedCapsuleShape*">
+  The tapered capsule shape
+</ParamField>
+
+**Returns:** The top radius
+
+### JPH_TaperedCapsuleShape_GetBottomRadius
+
+Gets the bottom radius.
+
+```c
+float JPH_TaperedCapsuleShape_GetBottomRadius(const JPH_TaperedCapsuleShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_TaperedCapsuleShape*">
+  The tapered capsule shape
+</ParamField>
+
+**Returns:** The bottom radius
+
+### JPH_TaperedCapsuleShape_GetHalfHeight
+
+Gets the half height.
+
+```c
+float JPH_TaperedCapsuleShape_GetHalfHeight(const JPH_TaperedCapsuleShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_TaperedCapsuleShape*">
+  The tapered capsule shape
+</ParamField>
+
+**Returns:** The half height
+
+## Tapered Cylinder Shape
+
+A cylinder with different radii at top and bottom.
+
+### JPH_TaperedCylinderShapeSettings_Create
+
+Creates tapered cylinder shape settings.
+
+```c
+JPH_TaperedCylinderShapeSettings* JPH_TaperedCylinderShapeSettings_Create(
+    float halfHeightOfTaperedCylinder,
+    float topRadius,
+    float bottomRadius,
+    float convexRadius,
+    const JPH_PhysicsMaterial* material
+);
+```
+
+<ParamField path="halfHeightOfTaperedCylinder" type="float">
+  Half height of the tapered cylinder
+</ParamField>
+
+<ParamField path="topRadius" type="float">
+  Radius at the top
+</ParamField>
+
+<ParamField path="bottomRadius" type="float">
+  Radius at the bottom
+</ParamField>
+
+<ParamField path="convexRadius" type="float">
+  Convex radius (use `JPH_DEFAULT_CONVEX_RADIUS`)
+</ParamField>
+
+<ParamField path="material" type="const JPH_PhysicsMaterial*">
+  Optional physics material (can be `NULL`)
+</ParamField>
+
+**Returns:** Shape settings for a tapered cylinder
+
+### JPH_TaperedCylinderShapeSettings_CreateShape
+
+Creates a tapered cylinder shape from settings.
+
+```c
+JPH_TaperedCylinderShape* JPH_TaperedCylinderShapeSettings_CreateShape(
+    const JPH_TaperedCylinderShapeSettings* settings
+);
+```
+
+<ParamField path="settings" type="const JPH_TaperedCylinderShapeSettings*">
+  The shape settings
+</ParamField>
+
+**Returns:** A pointer to the created tapered cylinder shape
+
+**Example:**
+```c
+JPH_TaperedCylinderShapeSettings* settings = 
+    JPH_TaperedCylinderShapeSettings_Create(1.0f, 0.5f, 0.3f, JPH_DEFAULT_CONVEX_RADIUS, NULL);
+JPH_TaperedCylinderShape* shape = JPH_TaperedCylinderShapeSettings_CreateShape(settings);
+```
+
+### JPH_TaperedCylinderShape_GetTopRadius
+
+Gets the top radius.
+
+```c
+float JPH_TaperedCylinderShape_GetTopRadius(const JPH_TaperedCylinderShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_TaperedCylinderShape*">
+  The tapered cylinder shape
+</ParamField>
+
+**Returns:** The top radius
+
+### JPH_TaperedCylinderShape_GetBottomRadius
+
+Gets the bottom radius.
+
+```c
+float JPH_TaperedCylinderShape_GetBottomRadius(const JPH_TaperedCylinderShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_TaperedCylinderShape*">
+  The tapered cylinder shape
+</ParamField>
+
+**Returns:** The bottom radius
+
+### JPH_TaperedCylinderShape_GetHalfHeight
+
+Gets the half height.
+
+```c
+float JPH_TaperedCylinderShape_GetHalfHeight(const JPH_TaperedCylinderShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_TaperedCylinderShape*">
+  The tapered cylinder shape
+</ParamField>
+
+**Returns:** The half height
+
+### JPH_TaperedCylinderShape_GetConvexRadius
+
+Gets the convex radius.
+
+```c
+float JPH_TaperedCylinderShape_GetConvexRadius(const JPH_TaperedCylinderShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_TaperedCylinderShape*">
+  The tapered cylinder shape
+</ParamField>
+
+**Returns:** The convex radius
+
+## Convex Hull Shape
+
+A convex hull is the smallest convex shape that contains a set of points.
+
+### JPH_ConvexHullShapeSettings_Create
+
+Creates convex hull shape settings from a point cloud.
+
+```c
+JPH_ConvexHullShapeSettings* JPH_ConvexHullShapeSettings_Create(
+    const JPH_Vec3* points,
+    uint32_t pointsCount,
+    float maxConvexRadius
+);
+```
+
+<ParamField path="points" type="const JPH_Vec3*">
+  Array of points to build the convex hull from
+</ParamField>
+
+<ParamField path="pointsCount" type="uint32_t">
+  Number of points in the array
+</ParamField>
+
+<ParamField path="maxConvexRadius" type="float">
+  Maximum convex radius to use (typically `JPH_DEFAULT_CONVEX_RADIUS`)
+</ParamField>
+
+**Returns:** Shape settings for a convex hull
+
+### JPH_ConvexHullShapeSettings_CreateShape
+
+Creates a convex hull shape from settings.
+
+```c
+JPH_ConvexHullShape* JPH_ConvexHullShapeSettings_CreateShape(
+    const JPH_ConvexHullShapeSettings* settings
+);
+```
+
+<ParamField path="settings" type="const JPH_ConvexHullShapeSettings*">
+  The shape settings
+</ParamField>
+
+**Returns:** A pointer to the created convex hull shape
+
+**Example:**
+```c
+JPH_Vec3 points[] = {
+    {-1, -1, -1}, {1, -1, -1}, {1, 1, -1}, {-1, 1, -1},
+    {-1, -1, 1}, {1, -1, 1}, {1, 1, 1}, {-1, 1, 1}
+};
+
+JPH_ConvexHullShapeSettings* settings = 
+    JPH_ConvexHullShapeSettings_Create(points, 8, JPH_DEFAULT_CONVEX_RADIUS);
+JPH_ConvexHullShape* hull = JPH_ConvexHullShapeSettings_CreateShape(settings);
+```
+
+### JPH_ConvexHullShape_GetNumPoints
+
+Gets the number of points in the convex hull.
+
+```c
+uint32_t JPH_ConvexHullShape_GetNumPoints(const JPH_ConvexHullShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_ConvexHullShape*">
+  The convex hull shape
+</ParamField>
+
+**Returns:** The number of points
+
+### JPH_ConvexHullShape_GetPoint
+
+Gets a specific point from the convex hull.
+
+```c
+void JPH_ConvexHullShape_GetPoint(
+    const JPH_ConvexHullShape* shape,
+    uint32_t index,
+    JPH_Vec3* result
+);
+```
+
+<ParamField path="shape" type="const JPH_ConvexHullShape*">
+  The convex hull shape
+</ParamField>
+
+<ParamField path="index" type="uint32_t">
+  Index of the point to retrieve
+</ParamField>
+
+<ParamField path="result" type="JPH_Vec3*">
+  Output parameter for the point coordinates
+</ParamField>
+
+### JPH_ConvexHullShape_GetNumFaces
+
+Gets the number of faces in the convex hull.
+
+```c
+uint32_t JPH_ConvexHullShape_GetNumFaces(const JPH_ConvexHullShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_ConvexHullShape*">
+  The convex hull shape
+</ParamField>
+
+**Returns:** The number of faces
+
+### JPH_ConvexHullShape_GetNumVerticesInFace
+
+Gets the number of vertices in a specific face.
+
+```c
+uint32_t JPH_ConvexHullShape_GetNumVerticesInFace(
+    const JPH_ConvexHullShape* shape,
+    uint32_t faceIndex
+);
+```
+
+<ParamField path="shape" type="const JPH_ConvexHullShape*">
+  The convex hull shape
+</ParamField>
+
+<ParamField path="faceIndex" type="uint32_t">
+  Index of the face
+</ParamField>
+
+**Returns:** The number of vertices in the face
+
+### JPH_ConvexHullShape_GetFaceVertices
+
+Gets the vertex indices for a specific face.
+
+```c
+uint32_t JPH_ConvexHullShape_GetFaceVertices(
+    const JPH_ConvexHullShape* shape,
+    uint32_t faceIndex,
+    uint32_t maxVertices,
+    uint32_t* vertices
+);
+```
+
+<ParamField path="shape" type="const JPH_ConvexHullShape*">
+  The convex hull shape
+</ParamField>
+
+<ParamField path="faceIndex" type="uint32_t">
+  Index of the face
+</ParamField>
+
+<ParamField path="maxVertices" type="uint32_t">
+  Maximum number of vertices to retrieve
+</ParamField>
+
+<ParamField path="vertices" type="uint32_t*">
+  Output array for vertex indices
+</ParamField>
+
+**Returns:** The actual number of vertices retrieved

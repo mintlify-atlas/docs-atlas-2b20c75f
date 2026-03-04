@@ -1,0 +1,185 @@
+---
+title: Introduction to JoltC
+description: A C interface for the JoltPhysics physics engine, providing high-performance physics simulation for games and interactive applications
+---
+
+## What is JoltC?
+
+JoltC is a C interface wrapper for [JoltPhysics](https://github.com/jrouwe/JoltPhysics), a high-performance physics engine designed for games and interactive 3D applications. While JoltPhysics is written in modern C++17, JoltC provides a pure C API that makes it accessible from a wide range of programming languages and environments.
+
+<Note>
+JoltC is maintained by [Amer Koleci](https://github.com/amerkoleci) and provides a stable, easy-to-use C API over the powerful JoltPhysics engine.
+</Note>
+
+## Key Features
+
+### High-Performance Physics Simulation
+
+JoltC inherits all the performance characteristics of JoltPhysics:
+
+- **Multi-threaded architecture** - Efficient use of modern multi-core processors
+- **Optimized broad phase** - Fast collision detection using advanced spatial partitioning
+- **SIMD optimizations** - Leverages SSE4.1, SSE4.2, AVX, AVX2, and optional AVX-512 instructions
+- **Deterministic simulation** - Optional cross-platform deterministic physics for networked games
+
+### Comprehensive Shape Support
+
+JoltC supports a wide variety of collision shapes:
+
+- **Convex shapes**: Sphere, Box, Capsule, Cylinder, Convex Hull
+- **Compound shapes**: Static and Mutable compounds for complex objects  
+- **Mesh shapes**: Triangle meshes for static geometry
+- **Height fields**: Efficient terrain representation
+- **Decorated shapes**: Scaled, Rotated, Translated, and Offset Center of Mass
+
+### Advanced Constraint System
+
+Full support for physics constraints and joints:
+
+- Fixed, Point, Hinge, Slider, Distance constraints
+- Cone and Swing-Twist constraints for ragdolls
+- 6-DOF (Six Degrees of Freedom) constraints
+- Gear, Rack and Pinion, and Pulley constraints
+- Motors with position and velocity control
+
+### Character Controller
+
+Two character controller implementations:
+
+- **Character** - Rigid body based character controller
+- **CharacterVirtual** - Kinematic character controller with more direct control
+
+### C API Benefits
+
+- **Language interoperability** - Easy to bind from C, C#, Rust, Zig, Odin, and other languages
+- **Stable ABI** - No C++ name mangling or template instantiation issues
+- **Simple memory model** - Clear ownership and lifetime management
+- **Wide platform support** - Windows, Linux, macOS, iOS, Android, and WebAssembly
+
+## When to Use JoltC
+
+<Tip>
+JoltC is ideal when you need high-performance physics simulation with a C interface for language interoperability.
+</Tip>
+
+### Perfect For
+
+- **Game engines** requiring a C-based physics backend
+- **Language bindings** for languages with C FFI (Foreign Function Interface)
+- **Cross-platform projects** needing deterministic physics
+- **High-performance simulations** with many simultaneous objects
+- **Robotics and simulation** requiring accurate rigid body dynamics
+
+### Consider Alternatives If
+
+- You need soft body physics (limited support in JoltPhysics)
+- You require a full game engine rather than just physics
+- You need 2D-only physics (JoltPhysics is 3D-focused)
+- You prefer a pure C++ API (use JoltPhysics directly)
+
+## Architecture Overview
+
+JoltC follows a layered architecture:
+
+```
+┌─────────────────────────────────────┐
+│     Your Application (C/C#/Rust)    │
+├─────────────────────────────────────┤
+│          JoltC C API (joltc.h)      │
+├─────────────────────────────────────┤
+│       JoltPhysics C++ Library       │
+└─────────────────────────────────────┘
+```
+
+### Core Components
+
+**JPH_PhysicsSystem**  
+The main physics world that manages all simulation state, including bodies, constraints, and collision detection.
+
+**JPH_BodyInterface**  
+Provides thread-safe methods to create, modify, and query rigid bodies in the simulation.
+
+**JPH_Shape**  
+Defines the collision geometry for bodies. Shapes can be created from settings or directly constructed.
+
+**JPH_Constraint**  
+Represents joints and constraints between bodies, controlling their relative motion.
+
+**JPH_JobSystem**  
+Manages multi-threaded execution of physics tasks for optimal performance.
+
+## Platform Support
+
+JoltC supports the same platforms as JoltPhysics:
+
+- **Windows** - x64, ARM64 (Visual Studio, Clang)
+- **Linux** - x64, ARM64 (GCC, Clang)
+- **macOS** - Universal Binary (x64 + Apple Silicon)
+- **iOS** - ARM64
+- **Android** - ARM64, x86_64
+- **WebAssembly** - With optional SIMD support
+
+<Note>
+JoltC requires **C++17** for building but exposes a pure **C interface** for consumption.
+</Note>
+
+## Precision Modes
+
+JoltC supports two precision modes:
+
+### Single Precision (Default)
+
+- Positions use `float` (32-bit)
+- Suitable for most game worlds
+- Better performance and memory usage
+- Recommended for worlds up to ~10km radius
+
+### Double Precision
+
+- Positions use `double` (64-bit)  
+- Required for very large worlds (space simulations, planet-scale)
+- Enable with `DOUBLE_PRECISION` CMake option
+- All `JPH_RVec3` and `JPH_RMat4` types become double precision
+
+<Warning>
+You must build JoltC with the same precision mode that your application expects. Mixing precision modes will cause crashes or undefined behavior.
+</Warning>
+
+## Build Options
+
+JoltC inherits many build options from JoltPhysics:
+
+- **USE_ASSERTS** - Enable runtime assertions for debugging
+- **DOUBLE_PRECISION** - Use double precision for positions
+- **CROSS_PLATFORM_DETERMINISTIC** - Ensure deterministic simulation across platforms
+- **OBJECT_LAYER_BITS** - Number of bits for object layers (default: 32)
+- **DEBUG_RENDERER_IN_DISTRIBUTION** - Include debug rendering in release builds
+- **PROFILER_IN_DISTRIBUTION** - Include profiler in release builds
+
+See the [Installation](/installation) guide for complete build instructions.
+
+## License
+
+JoltC is licensed under the MIT License, making it free to use in both open source and commercial projects.
+
+## Next Steps
+
+<Steps>
+  <Step title="Install JoltC">
+    Learn how to build JoltC from source and integrate it into your project.
+    
+    [Read the Installation Guide →](/installation)
+  </Step>
+  
+  <Step title="Quick Start Tutorial">
+    Create your first physics simulation with a complete working example.
+    
+    [Start the Quick Start →](/quickstart)
+  </Step>
+  
+  <Step title="Explore the API">
+    Dive into the complete API reference to learn all available functionality.
+    
+    [Browse API Reference →](/api/initialization)
+  </Step>
+</Steps>

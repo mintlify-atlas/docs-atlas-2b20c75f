@@ -1,0 +1,342 @@
+---
+title: Creating Bodies
+description: Learn how to create static, kinematic, and dynamic rigid bodies in JoltC
+---
+
+# Creating Bodies
+
+Bodies are the fundamental objects in Jolt Physics. This guide explains how to create and configure different types of bodies.
+
+## Body Types
+
+JoltC supports three motion types for bodies:
+
+- **Static** (`JPH_MotionType_Static`) - Immovable objects like terrain or walls
+- **Kinematic** (`JPH_MotionType_Kinematic`) - Animated objects moved by code, not physics
+- **Dynamic** (`JPH_MotionType_Dynamic`) - Objects affected by forces and collisions
+
+## Creating a Static Body
+
+Static bodies are perfect for ground, walls, and other immovable objects.
+
+<Steps>
+  <Step title="Create a shape">
+    First, define the collision shape for your body:
+
+    ```c joltc.h:1314
+    JPH_Vec3 boxHalfExtents = { 100.0f, 1.0f, 100.0f };
+    JPH_BoxShape* floorShape = JPH_BoxShape_Create(
+        &boxHalfExtents,
+        JPH_DEFAULT_CONVEX_RADIUS
+    );
+    ```
+  </Step>
+
+  <Step title="Configure body settings">
+    Create body creation settings with position and motion type:
+
+    ```c joltc.h:1489
+    JPH_Vec3 floorPosition = { 0.0f, -1.0f, 0.0f };
+    JPH_BodyCreationSettings* settings = JPH_BodyCreationSettings_Create3(
+        (const JPH_Shape*)floorShape,
+        &floorPosition,
+        NULL, // Identity rotation
+        JPH_MotionType_Static,
+        Layers::NON_MOVING
+    );
+    ```
+  </Step>
+
+  <Step title="Add to physics system">
+    Create and add the body to the simulation:
+
+    ```c joltc.h:1772
+    JPH_BodyID floorId = JPH_BodyInterface_CreateAndAddBody(
+        bodyInterface,
+        settings,
+        JPH_Activation_DontActivate
+    );
+    JPH_BodyCreationSettings_Destroy(settings);
+    ```
+  </Step>
+</Steps>
+
+## Creating a Dynamic Body
+
+Dynamic bodies respond to forces, gravity, and collisions.
+
+<Steps>
+  <Step title="Create a shape">
+    ```c joltc.h:1324
+    JPH_SphereShape* sphereShape = JPH_SphereShape_Create(0.5f);
+    ```
+  </Step>
+
+  <Step title="Configure body settings">
+    ```c joltc.h:1489
+    JPH_Vec3 position = { 0.0f, 10.0f, 0.0f };
+    JPH_BodyCreationSettings* settings = JPH_BodyCreationSettings_Create3(
+        (const JPH_Shape*)sphereShape,
+        &position,
+        NULL,
+        JPH_MotionType_Dynamic,
+        Layers::MOVING
+    );
+    ```
+  </Step>
+
+  <Step title="Add to physics system">
+    Activate the body so it immediately participates in simulation:
+
+    ```c joltc.h:1772
+    JPH_BodyID bodyId = JPH_BodyInterface_CreateAndAddBody(
+        bodyInterface,
+        settings,
+        JPH_Activation_Activate
+    );
+    JPH_BodyCreationSettings_Destroy(settings);
+    ```
+  </Step>
+</Steps>
+
+## Creating a Kinematic Body
+
+Kinematic bodies are moved by setting their position/velocity directly, not by forces.
+
+```c joltc.h:1489
+JPH_Vec3 position = { 0.0f, 5.0f, 0.0f };
+JPH_BodyCreationSettings* settings = JPH_BodyCreationSettings_Create3(
+    (const JPH_Shape*)shape,
+    &position,
+    NULL,
+    JPH_MotionType_Kinematic,
+    Layers::MOVING
+);
+
+JPH_BodyID bodyId = JPH_BodyInterface_CreateAndAddBody(
+    bodyInterface,
+    settings,
+    JPH_Activation_Activate
+);
+```
+
+## Available Shapes
+
+<Tabs>
+  <Tab title="Convex Shapes">
+    - **Box** - Rectangular prism
+      ```c
+      JPH_Vec3 halfExtent = { 1.0f, 2.0f, 0.5f };
+      JPH_BoxShape* box = JPH_BoxShape_Create(&halfExtent, 0.05f);
+      ```
+    
+    - **Sphere** - Perfect ball
+      ```c
+      JPH_SphereShape* sphere = JPH_SphereShape_Create(1.0f);
+      ```
+    
+    - **Capsule** - Pill shape
+      ```c
+      JPH_CapsuleShape* capsule = JPH_CapsuleShape_Create(
+          0.5f,  // half height of cylinder
+          0.3f   // radius
+      );
+      ```
+    
+    - **Cylinder** - Can shape
+      ```c
+      JPH_CylinderShape* cylinder = JPH_CylinderShape_Create(
+          1.0f,  // half height
+          0.5f   // radius
+      );
+      ```
+  </Tab>
+
+  <Tab title="Complex Shapes">
+    - **Convex Hull** - Convex wrapper around points
+      ```c
+      JPH_Vec3 points[] = { ... };
+      JPH_ConvexHullShapeSettings* settings = 
+          JPH_ConvexHullShapeSettings_Create(
+              points,
+              pointCount,
+              JPH_DEFAULT_CONVEX_RADIUS
+          );
+      JPH_ConvexHullShape* shape = 
+          JPH_ConvexHullShapeSettings_CreateShape(settings);
+      ```
+    
+    - **Mesh** - Triangle mesh for static geometry
+      ```c
+      JPH_MeshShapeSettings* settings = 
+          JPH_MeshShapeSettings_Create(
+              triangles,
+              triangleCount
+          );
+      JPH_MeshShape* mesh = JPH_MeshShapeSettings_CreateShape(settings);
+      ```
+    
+    - **Height Field** - Terrain
+      ```c
+      JPH_HeightFieldShapeSettings* settings = 
+          JPH_HeightFieldShapeSettings_Create(
+              samples,
+              &offset,
+              &scale,
+              sampleCount,
+              materialIndices
+          );
+      ```
+  </Tab>
+</Tabs>
+
+## Body Properties
+
+### Physical Properties
+
+Set material properties before creating the body:
+
+```c joltc.h:1548-1551
+// Friction (0 = frictionless, 1 = high friction)
+JPH_BodyCreationSettings_SetFriction(settings, 0.5f);
+
+// Restitution (0 = no bounce, 1 = perfect bounce)
+JPH_BodyCreationSettings_SetRestitution(settings, 0.3f);
+```
+
+### Mass Properties
+
+By default, mass is calculated from shape and density. You can override:
+
+```c joltc.h:1574-1581
+JPH_BodyCreationSettings_SetOverrideMassProperties(
+    settings,
+    JPH_OverrideMassProperties_MassAndInertiaProvided
+);
+
+JPH_MassProperties massProps;
+massProps.mass = 10.0f;
+JPH_BodyCreationSettings_SetMassPropertiesOverride(settings, &massProps);
+```
+
+### Initial Velocity
+
+Set initial linear and angular velocity:
+
+```c joltc.h:1502-1506
+JPH_Vec3 linearVel = { 5.0f, 0.0f, 0.0f };
+JPH_BodyCreationSettings_SetLinearVelocity(settings, &linearVel);
+
+JPH_Vec3 angularVel = { 0.0f, 3.14f, 0.0f };
+JPH_BodyCreationSettings_SetAngularVelocity(settings, &angularVel);
+```
+
+## Modifying Bodies After Creation
+
+### Changing Position
+
+```c joltc.h:1805
+JPH_RVec3 newPosition = { 10.0f, 5.0f, 0.0f };
+JPH_BodyInterface_SetPosition(
+    bodyInterface,
+    bodyId,
+    &newPosition,
+    JPH_Activation_Activate
+);
+```
+
+### Applying Forces
+
+```c joltc.h:1851-1854
+// Apply force at center of mass
+JPH_Vec3 force = { 0.0f, 100.0f, 0.0f };
+JPH_BodyInterface_AddForce(bodyInterface, bodyId, &force);
+
+// Apply force at specific point
+JPH_RVec3 point = { 1.0f, 0.0f, 0.0f };
+JPH_BodyInterface_AddForce2(bodyInterface, bodyId, &force, &point);
+```
+
+### Applying Impulses
+
+```c joltc.h:1856-1858
+// Instant velocity change
+JPH_Vec3 impulse = { 0.0f, 10.0f, 0.0f };
+JPH_BodyInterface_AddImpulse(bodyInterface, bodyId, &impulse);
+
+JPH_RVec3 point = { 1.0f, 0.0f, 0.0f };
+JPH_BodyInterface_AddImpulse2(bodyInterface, bodyId, &impulse, &point);
+```
+
+## Motion Quality
+
+For fast-moving objects, use continuous collision detection:
+
+```c joltc.h:1538
+JPH_BodyCreationSettings_SetMotionQuality(
+    settings,
+    JPH_MotionQuality_LinearCast
+);
+```
+
+- `JPH_MotionQuality_Discrete` - Default, faster but can tunnel through thin objects
+- `JPH_MotionQuality_LinearCast` - Prevents tunneling for fast objects
+
+## Complete Example
+
+Here's a complete example from the HelloWorld sample:
+
+```c main.cpp:64-99
+// Create floor
+JPH_Vec3 boxHalfExtents = { 100.0f, 1.0f, 100.0f };
+JPH_BoxShape* floorShape = JPH_BoxShape_Create(
+    &boxHalfExtents,
+    JPH_DEFAULT_CONVEX_RADIUS
+);
+
+JPH_Vec3 floorPosition = { 0.0f, -1.0f, 0.0f };
+JPH_BodyCreationSettings* floorSettings = JPH_BodyCreationSettings_Create3(
+    (const JPH_Shape*)floorShape,
+    &floorPosition,
+    NULL,
+    JPH_MotionType_Static,
+    Layers::NON_MOVING
+);
+
+JPH_BodyID floorId = JPH_BodyInterface_CreateAndAddBody(
+    bodyInterface,
+    floorSettings,
+    JPH_Activation_DontActivate
+);
+JPH_BodyCreationSettings_Destroy(floorSettings);
+
+// Create dynamic sphere
+JPH_SphereShape* sphereShape = JPH_SphereShape_Create(0.5f);
+JPH_Vec3 spherePosition = { 0.0f, 2.0f, 0.0f };
+JPH_BodyCreationSettings* sphereSettings = JPH_BodyCreationSettings_Create3(
+    (const JPH_Shape*)sphereShape,
+    &spherePosition,
+    NULL,
+    JPH_MotionType_Dynamic,
+    Layers::MOVING
+);
+
+JPH_BodyID sphereId = JPH_BodyInterface_CreateAndAddBody(
+    bodyInterface,
+    sphereSettings,
+    JPH_Activation_Activate
+);
+JPH_BodyCreationSettings_Destroy(sphereSettings);
+
+// Give it initial velocity
+JPH_Vec3 velocity = { 0.0f, -5.0f, 0.0f };
+JPH_BodyInterface_SetLinearVelocity(bodyInterface, sphereId, &velocity);
+```
+
+## Cleanup
+
+Always clean up bodies when done:
+
+```c joltc.h:1788
+JPH_BodyInterface_RemoveAndDestroyBody(bodyInterface, bodyId);
+```

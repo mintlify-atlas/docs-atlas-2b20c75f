@@ -1,0 +1,690 @@
+---
+title: Six DOF Constraint
+description: API reference for JPH_SixDOFConstraint - configurable constraint with control over all 6 degrees of freedom
+---
+
+# Six DOF Constraint
+
+The `JPH_SixDOFConstraint` is the most flexible constraint type, providing independent control over all 6 degrees of freedom (3 translational and 3 rotational axes). Each axis can be configured as free, fixed, or limited.
+
+## Use Cases
+
+- Complex mechanical joints
+- Character ragdoll joints
+- Robotic arms and manipulators
+- Custom constraints with specific DOF requirements
+- Vehicle suspension with multiple controlled axes
+- Joystick or flight control mechanisms
+
+## Types
+
+### JPH_SixDOFConstraint
+
+```c
+typedef struct JPH_SixDOFConstraint JPH_SixDOFConstraint;
+```
+
+Opaque handle to a six DOF constraint instance.
+
+### JPH_SixDOFConstraintAxis
+
+```c
+typedef enum JPH_SixDOFConstraintAxis {
+    JPH_SixDOFConstraintAxis_TranslationX,
+    JPH_SixDOFConstraintAxis_TranslationY,
+    JPH_SixDOFConstraintAxis_TranslationZ,
+    JPH_SixDOFConstraintAxis_RotationX,
+    JPH_SixDOFConstraintAxis_RotationY,
+    JPH_SixDOFConstraintAxis_RotationZ,
+} JPH_SixDOFConstraintAxis;
+```
+
+Enumeration of the six constraint axes.
+
+### JPH_SixDOFConstraintSettings
+
+```c
+typedef struct JPH_SixDOFConstraintSettings {
+    JPH_ConstraintSettings  base;
+    JPH_ConstraintSpace     space;
+    JPH_RVec3               position1;
+    JPH_Vec3                axisX1;
+    JPH_Vec3                axisY1;
+    JPH_RVec3               position2;
+    JPH_Vec3                axisX2;
+    JPH_Vec3                axisY2;
+    float                   maxFriction[6];
+    JPH_SwingType           swingType;
+    float                   limitMin[6];
+    float                   limitMax[6];
+    JPH_SpringSettings      limitsSpringSettings[3];
+    JPH_MotorSettings       motorSettings[6];
+} JPH_SixDOFConstraintSettings;
+```
+
+Settings structure for creating a six DOF constraint.
+
+<ParamField path="base" type="JPH_ConstraintSettings">
+  Base constraint settings (enabled, priority, etc.)
+</ParamField>
+
+<ParamField path="space" type="JPH_ConstraintSpace">
+  Coordinate space for the constraint
+</ParamField>
+
+<ParamField path="position1" type="JPH_RVec3">
+  Constraint attachment position on body 1
+</ParamField>
+
+<ParamField path="axisX1" type="JPH_Vec3">
+  X-axis direction for body 1's constraint frame
+</ParamField>
+
+<ParamField path="axisY1" type="JPH_Vec3">
+  Y-axis direction for body 1's constraint frame
+</ParamField>
+
+<ParamField path="position2" type="JPH_RVec3">
+  Constraint attachment position on body 2
+</ParamField>
+
+<ParamField path="axisX2" type="JPH_Vec3">
+  X-axis direction for body 2's constraint frame
+</ParamField>
+
+<ParamField path="axisY2" type="JPH_Vec3">
+  Y-axis direction for body 2's constraint frame
+</ParamField>
+
+<ParamField path="maxFriction" type="float[6]">
+  Maximum friction for each axis (N for translation, N·m for rotation)
+</ParamField>
+
+<ParamField path="swingType" type="JPH_SwingType">
+  Type of swing limits:
+  - `JPH_SwingType_Cone`: Cone-shaped limit
+  - `JPH_SwingType_Pyramid`: Pyramid-shaped limit
+</ParamField>
+
+<ParamField path="limitMin" type="float[6]">
+  Minimum limit for each axis (meters for translation, radians for rotation)
+</ParamField>
+
+<ParamField path="limitMax" type="float[6]">
+  Maximum limit for each axis (meters for translation, radians for rotation)
+</ParamField>
+
+<ParamField path="limitsSpringSettings" type="JPH_SpringSettings[3]">
+  Spring settings for translational limits (X, Y, Z)
+</ParamField>
+
+<ParamField path="motorSettings" type="JPH_MotorSettings[6]">
+  Motor settings for each axis
+</ParamField>
+
+## Functions
+
+### Settings
+
+#### JPH_SixDOFConstraintSettings_Init
+
+```c
+void JPH_SixDOFConstraintSettings_Init(JPH_SixDOFConstraintSettings* settings);
+```
+
+Initializes a six DOF constraint settings structure with default values (all axes fixed).
+
+<ParamField path="settings" type="JPH_SixDOFConstraintSettings*">
+  Pointer to settings structure to initialize
+</ParamField>
+
+#### JPH_SixDOFConstraintSettings_MakeFreeAxis
+
+```c
+void JPH_SixDOFConstraintSettings_MakeFreeAxis(
+    JPH_SixDOFConstraintSettings* settings,
+    JPH_SixDOFConstraintAxis axis
+);
+```
+
+Configures an axis to be free (unconstrained).
+
+<ParamField path="settings" type="JPH_SixDOFConstraintSettings*">
+  Settings structure to modify
+</ParamField>
+
+<ParamField path="axis" type="JPH_SixDOFConstraintAxis">
+  Axis to make free
+</ParamField>
+
+#### JPH_SixDOFConstraintSettings_IsFreeAxis
+
+```c
+bool JPH_SixDOFConstraintSettings_IsFreeAxis(
+    const JPH_SixDOFConstraintSettings* settings,
+    JPH_SixDOFConstraintAxis axis
+);
+```
+
+Checks if an axis is configured as free.
+
+#### JPH_SixDOFConstraintSettings_MakeFixedAxis
+
+```c
+void JPH_SixDOFConstraintSettings_MakeFixedAxis(
+    JPH_SixDOFConstraintSettings* settings,
+    JPH_SixDOFConstraintAxis axis
+);
+```
+
+Configures an axis to be fixed (fully constrained).
+
+<ParamField path="settings" type="JPH_SixDOFConstraintSettings*">
+  Settings structure to modify
+</ParamField>
+
+<ParamField path="axis" type="JPH_SixDOFConstraintAxis">
+  Axis to make fixed
+</ParamField>
+
+#### JPH_SixDOFConstraintSettings_IsFixedAxis
+
+```c
+bool JPH_SixDOFConstraintSettings_IsFixedAxis(
+    const JPH_SixDOFConstraintSettings* settings,
+    JPH_SixDOFConstraintAxis axis
+);
+```
+
+Checks if an axis is configured as fixed.
+
+#### JPH_SixDOFConstraintSettings_SetLimitedAxis
+
+```c
+void JPH_SixDOFConstraintSettings_SetLimitedAxis(
+    JPH_SixDOFConstraintSettings* settings,
+    JPH_SixDOFConstraintAxis axis,
+    float min,
+    float max
+);
+```
+
+Configures an axis to be limited within a range.
+
+<ParamField path="settings" type="JPH_SixDOFConstraintSettings*">
+  Settings structure to modify
+</ParamField>
+
+<ParamField path="axis" type="JPH_SixDOFConstraintAxis">
+  Axis to limit
+</ParamField>
+
+<ParamField path="min" type="float">
+  Minimum limit (meters for translation, radians for rotation)
+</ParamField>
+
+<ParamField path="max" type="float">
+  Maximum limit (meters for translation, radians for rotation)
+</ParamField>
+
+### Creation
+
+#### JPH_SixDOFConstraint_Create
+
+```c
+JPH_SixDOFConstraint* JPH_SixDOFConstraint_Create(
+    const JPH_SixDOFConstraintSettings* settings,
+    JPH_Body* body1,
+    JPH_Body* body2
+);
+```
+
+Creates a new six DOF constraint between two bodies.
+
+<ParamField path="settings" type="const JPH_SixDOFConstraintSettings*">
+  Constraint configuration settings
+</ParamField>
+
+<ParamField path="body1" type="JPH_Body*">
+  First body to constrain
+</ParamField>
+
+<ParamField path="body2" type="JPH_Body*">
+  Second body to constrain
+</ParamField>
+
+<ResponseField name="return" type="JPH_SixDOFConstraint*">
+  Pointer to the created constraint, or NULL on failure
+</ResponseField>
+
+#### JPH_SixDOFConstraint_GetSettings
+
+```c
+void JPH_SixDOFConstraint_GetSettings(
+    JPH_SixDOFConstraint* constraint,
+    JPH_SixDOFConstraintSettings* settings
+);
+```
+
+Retrieves the current settings of a six DOF constraint.
+
+### Querying Axes
+
+#### JPH_SixDOFConstraint_IsFixedAxis
+
+```c
+bool JPH_SixDOFConstraint_IsFixedAxis(
+    const JPH_SixDOFConstraint* constraint,
+    JPH_SixDOFConstraintAxis axis
+);
+```
+
+Checks if an axis is currently fixed.
+
+#### JPH_SixDOFConstraint_IsFreeAxis
+
+```c
+bool JPH_SixDOFConstraint_IsFreeAxis(
+    const JPH_SixDOFConstraint* constraint,
+    JPH_SixDOFConstraintAxis axis
+);
+```
+
+Checks if an axis is currently free.
+
+### Limits
+
+#### JPH_SixDOFConstraint_GetLimitsMin
+
+```c
+float JPH_SixDOFConstraint_GetLimitsMin(
+    JPH_SixDOFConstraint* constraint,
+    JPH_SixDOFConstraintAxis axis
+);
+```
+
+Gets the minimum limit for a specific axis.
+
+#### JPH_SixDOFConstraint_GetLimitsMax
+
+```c
+float JPH_SixDOFConstraint_GetLimitsMax(
+    JPH_SixDOFConstraint* constraint,
+    JPH_SixDOFConstraintAxis axis
+);
+```
+
+Gets the maximum limit for a specific axis.
+
+#### JPH_SixDOFConstraint_GetTranslationLimitsMin
+
+```c
+void JPH_SixDOFConstraint_GetTranslationLimitsMin(
+    const JPH_SixDOFConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets all translational minimum limits as a vector.
+
+#### JPH_SixDOFConstraint_GetTranslationLimitsMax
+
+```c
+void JPH_SixDOFConstraint_GetTranslationLimitsMax(
+    const JPH_SixDOFConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets all translational maximum limits as a vector.
+
+#### JPH_SixDOFConstraint_GetRotationLimitsMin
+
+```c
+void JPH_SixDOFConstraint_GetRotationLimitsMin(
+    const JPH_SixDOFConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets all rotational minimum limits as a vector.
+
+#### JPH_SixDOFConstraint_GetRotationLimitsMax
+
+```c
+void JPH_SixDOFConstraint_GetRotationLimitsMax(
+    const JPH_SixDOFConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets all rotational maximum limits as a vector.
+
+#### JPH_SixDOFConstraint_GetLimitsSpringSettings
+
+```c
+void JPH_SixDOFConstraint_GetLimitsSpringSettings(
+    JPH_SixDOFConstraint* constraint,
+    JPH_SpringSettings* result,
+    JPH_SixDOFConstraintAxis axis
+);
+```
+
+Gets the spring settings for a specific axis limit.
+
+#### JPH_SixDOFConstraint_SetLimitsSpringSettings
+
+```c
+void JPH_SixDOFConstraint_SetLimitsSpringSettings(
+    JPH_SixDOFConstraint* constraint,
+    JPH_SpringSettings* settings,
+    JPH_SixDOFConstraintAxis axis
+);
+```
+
+Sets the spring settings for a specific axis limit.
+
+### Friction
+
+#### JPH_SixDOFConstraint_SetMaxFriction
+
+```c
+void JPH_SixDOFConstraint_SetMaxFriction(
+    JPH_SixDOFConstraint* constraint,
+    JPH_SixDOFConstraintAxis axis,
+    float inFriction
+);
+```
+
+Sets the maximum friction for a specific axis.
+
+<ParamField path="constraint" type="JPH_SixDOFConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="axis" type="JPH_SixDOFConstraintAxis">
+  Axis to set friction for
+</ParamField>
+
+<ParamField path="inFriction" type="float">
+  Maximum friction (N for translation, N·m for rotation)
+</ParamField>
+
+#### JPH_SixDOFConstraint_GetMaxFriction
+
+```c
+float JPH_SixDOFConstraint_GetMaxFriction(
+    JPH_SixDOFConstraint* constraint,
+    JPH_SixDOFConstraintAxis axis
+);
+```
+
+Gets the maximum friction for a specific axis.
+
+### Rotation
+
+#### JPH_SixDOFConstraint_GetRotationInConstraintSpace
+
+```c
+void JPH_SixDOFConstraint_GetRotationInConstraintSpace(
+    JPH_SixDOFConstraint* constraint,
+    JPH_Quat* result
+);
+```
+
+Gets the current rotation in constraint space.
+
+<ParamField path="constraint" type="JPH_SixDOFConstraint*">
+  The constraint to query
+</ParamField>
+
+<ParamField path="result" type="JPH_Quat*">
+  Output quaternion to receive the rotation
+</ParamField>
+
+### Motor Control
+
+#### JPH_SixDOFConstraint_GetMotorSettings
+
+```c
+void JPH_SixDOFConstraint_GetMotorSettings(
+    JPH_SixDOFConstraint* constraint,
+    JPH_SixDOFConstraintAxis axis,
+    JPH_MotorSettings* settings
+);
+```
+
+Gets the motor settings for a specific axis.
+
+#### JPH_SixDOFConstraint_SetMotorState
+
+```c
+void JPH_SixDOFConstraint_SetMotorState(
+    JPH_SixDOFConstraint* constraint,
+    JPH_SixDOFConstraintAxis axis,
+    JPH_MotorState state
+);
+```
+
+Sets the motor state for a specific axis.
+
+<ParamField path="constraint" type="JPH_SixDOFConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="axis" type="JPH_SixDOFConstraintAxis">
+  Axis to control
+</ParamField>
+
+<ParamField path="state" type="JPH_MotorState">
+  Motor state (Off, Velocity, or Position)
+</ParamField>
+
+#### JPH_SixDOFConstraint_GetMotorState
+
+```c
+JPH_MotorState JPH_SixDOFConstraint_GetMotorState(
+    JPH_SixDOFConstraint* constraint,
+    JPH_SixDOFConstraintAxis axis
+);
+```
+
+Gets the motor state for a specific axis.
+
+#### JPH_SixDOFConstraint_SetTargetVelocityCS
+
+```c
+void JPH_SixDOFConstraint_SetTargetVelocityCS(
+    JPH_SixDOFConstraint* constraint,
+    JPH_Vec3* inVelocity
+);
+```
+
+Sets the target linear velocity in constraint space.
+
+#### JPH_SixDOFConstraint_GetTargetVelocityCS
+
+```c
+void JPH_SixDOFConstraint_GetTargetVelocityCS(
+    JPH_SixDOFConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the target linear velocity in constraint space.
+
+#### JPH_SixDOFConstraint_SetTargetAngularVelocityCS
+
+```c
+void JPH_SixDOFConstraint_SetTargetAngularVelocityCS(
+    JPH_SixDOFConstraint* constraint,
+    JPH_Vec3* inAngularVelocity
+);
+```
+
+Sets the target angular velocity in constraint space.
+
+#### JPH_SixDOFConstraint_GetTargetAngularVelocityCS
+
+```c
+void JPH_SixDOFConstraint_GetTargetAngularVelocityCS(
+    JPH_SixDOFConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the target angular velocity in constraint space.
+
+#### JPH_SixDOFConstraint_SetTargetPositionCS
+
+```c
+void JPH_SixDOFConstraint_SetTargetPositionCS(
+    JPH_SixDOFConstraint* constraint,
+    JPH_Vec3* inPosition
+);
+```
+
+Sets the target position in constraint space.
+
+#### JPH_SixDOFConstraint_GetTargetPositionCS
+
+```c
+void JPH_SixDOFConstraint_GetTargetPositionCS(
+    JPH_SixDOFConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the target position in constraint space.
+
+#### JPH_SixDOFConstraint_SetTargetOrientationCS
+
+```c
+void JPH_SixDOFConstraint_SetTargetOrientationCS(
+    JPH_SixDOFConstraint* constraint,
+    JPH_Quat* inOrientation
+);
+```
+
+Sets the target orientation in constraint space.
+
+#### JPH_SixDOFConstraint_GetTargetOrientationCS
+
+```c
+void JPH_SixDOFConstraint_GetTargetOrientationCS(
+    JPH_SixDOFConstraint* constraint,
+    JPH_Quat* result
+);
+```
+
+Gets the target orientation in constraint space.
+
+#### JPH_SixDOFConstraint_SetTargetOrientationBS
+
+```c
+void JPH_SixDOFConstraint_SetTargetOrientationBS(
+    JPH_SixDOFConstraint* constraint,
+    JPH_Quat* inOrientation
+);
+```
+
+Sets the target orientation in body 2's space.
+
+### Diagnostics
+
+#### JPH_SixDOFConstraint_GetTotalLambdaPosition
+
+```c
+void JPH_SixDOFConstraint_GetTotalLambdaPosition(
+    const JPH_SixDOFConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the total positional Lagrange multiplier (constraint force).
+
+#### JPH_SixDOFConstraint_GetTotalLambdaRotation
+
+```c
+void JPH_SixDOFConstraint_GetTotalLambdaRotation(
+    const JPH_SixDOFConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the total rotational Lagrange multiplier (constraint torque).
+
+#### JPH_SixDOFConstraint_GetTotalLambdaMotorTranslation
+
+```c
+void JPH_SixDOFConstraint_GetTotalLambdaMotorTranslation(
+    const JPH_SixDOFConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the Lagrange multiplier for translational motors.
+
+#### JPH_SixDOFConstraint_GetTotalLambdaMotorRotation
+
+```c
+void JPH_SixDOFConstraint_GetTotalLambdaMotorRotation(
+    const JPH_SixDOFConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the Lagrange multiplier for rotational motors.
+
+## Example
+
+```c
+// Create a ragdoll shoulder joint
+JPH_Body* torso = /* ... */;
+JPH_Body* upperArm = /* ... */;
+
+// Initialize settings
+JPH_SixDOFConstraintSettings settings;
+JPH_SixDOFConstraintSettings_Init(&settings);
+
+// Set constraint space
+settings.space = JPH_ConstraintSpace_WorldSpace;
+settings.position1 = (JPH_RVec3){ 0.5, 1.5, 0 };  // Shoulder position
+settings.position2 = (JPH_RVec3){ 0.5, 1.5, 0 };
+
+// Configure axes
+// Lock all translations
+JPH_SixDOFConstraintSettings_MakeFixedAxis(&settings, JPH_SixDOFConstraintAxis_TranslationX);
+JPH_SixDOFConstraintSettings_MakeFixedAxis(&settings, JPH_SixDOFConstraintAxis_TranslationY);
+JPH_SixDOFConstraintSettings_MakeFixedAxis(&settings, JPH_SixDOFConstraintAxis_TranslationZ);
+
+// Allow limited rotation around X and Y (swing)
+JPH_SixDOFConstraintSettings_SetLimitedAxis(&settings,
+    JPH_SixDOFConstraintAxis_RotationX, -1.57f, 1.57f);  // ±90 degrees
+JPH_SixDOFConstraintSettings_SetLimitedAxis(&settings,
+    JPH_SixDOFConstraintAxis_RotationY, -0.785f, 1.57f);  // -45 to +90 degrees
+
+// Allow free rotation around Z (twist)
+JPH_SixDOFConstraintSettings_SetLimitedAxis(&settings,
+    JPH_SixDOFConstraintAxis_RotationZ, -3.14f, 3.14f);  // Full rotation
+
+// Add some friction
+for (int i = 0; i < 6; i++) {
+    settings.maxFriction[i] = (i >= 3) ? 5.0f : 0.0f;  // Rotational friction only
+}
+
+// Create constraint
+JPH_SixDOFConstraint* shoulder = JPH_SixDOFConstraint_Create(
+    &settings,
+    torso,
+    upperArm
+);
+
+JPH_PhysicsSystem_AddConstraint(physicsSystem, (JPH_Constraint*)shoulder);
+```
+
+## See Also
+
+- [Hinge Constraint](/api/constraints/hinge) - Single-axis rotation
+- [Slider Constraint](/api/constraints/slider) - Single-axis translation
+- [Fixed Constraint](/api/constraints/fixed) - Rigid connection

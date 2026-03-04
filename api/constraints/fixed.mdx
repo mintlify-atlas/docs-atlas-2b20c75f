@@ -1,0 +1,217 @@
+---
+title: Fixed Constraint
+description: API reference for JPH_FixedConstraint - constrains all 6 degrees of freedom between two bodies
+---
+
+# Fixed Constraint
+
+The `JPH_FixedConstraint` completely constrains two bodies together, preventing any relative movement or rotation between them. This constraint locks all 6 degrees of freedom (3 translational and 3 rotational).
+
+## Use Cases
+
+- Rigidly attaching objects together
+- Creating composite bodies from multiple physics bodies
+- Implementing breakable connections (when combined with constraint limits)
+- Connecting vehicle parts that should move as one unit
+
+## Types
+
+### JPH_FixedConstraint
+
+```c
+typedef struct JPH_FixedConstraint JPH_FixedConstraint;
+```
+
+Opaque handle to a fixed constraint instance.
+
+### JPH_FixedConstraintSettings
+
+```c
+typedef struct JPH_FixedConstraintSettings {
+    JPH_ConstraintSettings  base;
+    JPH_ConstraintSpace     space;
+    bool                    autoDetectPoint;
+    JPH_RVec3               point1;
+    JPH_Vec3                axisX1;
+    JPH_Vec3                axisY1;
+    JPH_RVec3               point2;
+    JPH_Vec3                axisX2;
+    JPH_Vec3                axisY2;
+} JPH_FixedConstraintSettings;
+```
+
+Settings structure for creating a fixed constraint.
+
+<ParamField path="base" type="JPH_ConstraintSettings">
+  Base constraint settings (enabled, priority, etc.)
+</ParamField>
+
+<ParamField path="space" type="JPH_ConstraintSpace">
+  Coordinate space for the constraint points and axes:
+  - `JPH_ConstraintSpace_LocalToBodyCOM`: Local to each body's center of mass
+  - `JPH_ConstraintSpace_WorldSpace`: World space coordinates
+</ParamField>
+
+<ParamField path="autoDetectPoint" type="bool">
+  If true, automatically calculate the constraint point from body positions
+</ParamField>
+
+<ParamField path="point1" type="JPH_RVec3">
+  Constraint attachment point on body 1
+</ParamField>
+
+<ParamField path="axisX1" type="JPH_Vec3">
+  X-axis direction for body 1's constraint frame
+</ParamField>
+
+<ParamField path="axisY1" type="JPH_Vec3">
+  Y-axis direction for body 1's constraint frame
+</ParamField>
+
+<ParamField path="point2" type="JPH_RVec3">
+  Constraint attachment point on body 2
+</ParamField>
+
+<ParamField path="axisX2" type="JPH_Vec3">
+  X-axis direction for body 2's constraint frame
+</ParamField>
+
+<ParamField path="axisY2" type="JPH_Vec3">
+  Y-axis direction for body 2's constraint frame
+</ParamField>
+
+## Functions
+
+### JPH_FixedConstraintSettings_Init
+
+```c
+void JPH_FixedConstraintSettings_Init(JPH_FixedConstraintSettings* settings);
+```
+
+Initializes a fixed constraint settings structure with default values.
+
+<ParamField path="settings" type="JPH_FixedConstraintSettings*">
+  Pointer to settings structure to initialize
+</ParamField>
+
+### JPH_FixedConstraint_Create
+
+```c
+JPH_FixedConstraint* JPH_FixedConstraint_Create(
+    const JPH_FixedConstraintSettings* settings,
+    JPH_Body* body1,
+    JPH_Body* body2
+);
+```
+
+Creates a new fixed constraint between two bodies.
+
+<ParamField path="settings" type="const JPH_FixedConstraintSettings*">
+  Constraint configuration settings
+</ParamField>
+
+<ParamField path="body1" type="JPH_Body*">
+  First body to constrain
+</ParamField>
+
+<ParamField path="body2" type="JPH_Body*">
+  Second body to constrain
+</ParamField>
+
+<ResponseField name="return" type="JPH_FixedConstraint*">
+  Pointer to the created constraint, or NULL on failure
+</ResponseField>
+
+### JPH_FixedConstraint_GetSettings
+
+```c
+void JPH_FixedConstraint_GetSettings(
+    const JPH_FixedConstraint* constraint,
+    JPH_FixedConstraintSettings* settings
+);
+```
+
+Retrieves the current settings of a fixed constraint.
+
+<ParamField path="constraint" type="const JPH_FixedConstraint*">
+  The constraint to query
+</ParamField>
+
+<ParamField path="settings" type="JPH_FixedConstraintSettings*">
+  Output structure to receive the settings
+</ParamField>
+
+### JPH_FixedConstraint_GetTotalLambdaPosition
+
+```c
+void JPH_FixedConstraint_GetTotalLambdaPosition(
+    const JPH_FixedConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the total positional Lagrange multiplier applied by the constraint. This represents the constraint force in the last simulation step.
+
+<ParamField path="constraint" type="const JPH_FixedConstraint*">
+  The constraint to query
+</ParamField>
+
+<ParamField path="result" type="JPH_Vec3*">
+  Output vector to receive the lambda value
+</ParamField>
+
+### JPH_FixedConstraint_GetTotalLambdaRotation
+
+```c
+void JPH_FixedConstraint_GetTotalLambdaRotation(
+    const JPH_FixedConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the total rotational Lagrange multiplier applied by the constraint. This represents the constraint torque in the last simulation step.
+
+<ParamField path="constraint" type="const JPH_FixedConstraint*">
+  The constraint to query
+</ParamField>
+
+<ParamField path="result" type="JPH_Vec3*">
+  Output vector to receive the lambda value
+</ParamField>
+
+## Example
+
+```c
+// Create two dynamic bodies
+JPH_Body* box1 = /* ... create first box ... */;
+JPH_Body* box2 = /* ... create second box ... */;
+
+// Initialize constraint settings
+JPH_FixedConstraintSettings settings;
+JPH_FixedConstraintSettings_Init(&settings);
+
+// Configure the constraint
+settings.space = JPH_ConstraintSpace_WorldSpace;
+settings.autoDetectPoint = true;
+
+// Create the constraint
+JPH_FixedConstraint* constraint = JPH_FixedConstraint_Create(
+    &settings,
+    box1,
+    box2
+);
+
+// Add to physics system
+JPH_PhysicsSystem_AddConstraint(physicsSystem, (JPH_Constraint*)constraint);
+
+// Later: Query constraint forces
+JPH_Vec3 force;
+JPH_FixedConstraint_GetTotalLambdaPosition(constraint, &force);
+printf("Constraint force: (%f, %f, %f)\n", force.x, force.y, force.z);
+```
+
+## See Also
+
+- [Distance Constraint](/api/constraints/distance) - Constrains distance between bodies
+- [Hinge Constraint](/api/constraints/hinge) - Single-axis rotational joint
+- [Slider Constraint](/api/constraints/slider) - Single-axis linear joint

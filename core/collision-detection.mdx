@@ -1,0 +1,543 @@
+---
+title: 'Collision Detection'
+description: 'Understanding collision detection, filtering, and querying in JoltC'
+---
+
+JoltPhysics uses a multi-phase collision detection system to efficiently detect and resolve collisions between bodies.
+
+## Collision Detection Pipeline
+
+Collision detection happens in two main phases:
+
+### 1. Broad Phase
+
+Quickly identifies potentially colliding body pairs using axis-aligned bounding boxes (AABBs).
+
+```c
+typedef uint8_t JPH_BroadPhaseLayer;
+
+// Example broad phase layers
+static constexpr JPH_BroadPhaseLayer NON_MOVING(0);
+static constexpr JPH_BroadPhaseLayer MOVING(1);
+```
+
+The broad phase uses a spatial acceleration structure to avoid testing all pairs of bodies.
+
+<Info>
+  Use **2-8 broad phase layers**. Static objects should be in a separate layer from dynamic objects.
+</Info>
+
+### 2. Narrow Phase
+
+Performs precise collision detection using actual shape geometry.
+
+The narrow phase is only executed for pairs that passed the broad phase test.
+
+## Object Layers
+
+Object layers provide fine-grained collision filtering:
+
+```c
+typedef uint32_t JPH_ObjectLayer;
+
+// Example game layers
+enum GameLayers {
+    LAYER_NON_MOVING = 0,
+    LAYER_MOVING = 1,
+    LAYER_PLAYER = 2,
+    LAYER_ENEMY = 3,
+    LAYER_DEBRIS = 4,
+    LAYER_TRIGGER = 5,
+    NUM_LAYERS = 6
+};
+```
+
+### Object Layer Pair Filter
+
+Defines which object layers can collide:
+
+```c
+JPH_ObjectLayerPairFilter* filter = 
+    JPH_ObjectLayerPairFilterTable_Create(NUM_LAYERS);
+
+// Enable collisions
+JPH_ObjectLayerPairFilterTable_EnableCollision(filter, LAYER_PLAYER, LAYER_ENEMY);
+JPH_ObjectLayerPairFilterTable_EnableCollision(filter, LAYER_PLAYER, LAYER_NON_MOVING);
+JPH_ObjectLayerPairFilterTable_EnableCollision(filter, LAYER_MOVING, LAYER_MOVING);
+
+// Disable specific collisions
+JPH_ObjectLayerPairFilterTable_DisableCollision(filter, LAYER_DEBRIS, LAYER_TRIGGER);
+
+// Check if layers can collide
+bool canCollide = JPH_ObjectLayerPairFilterTable_ShouldCollide(
+    filter, 
+    LAYER_PLAYER, 
+    LAYER_ENEMY
+);
+```
+
+<Tip>
+  Design your layer hierarchy carefully. Common patterns:
+  - Static geometry in layer 0
+  - Dynamic objects in layer 1+
+  - Character controllers in dedicated layer
+  - Triggers/sensors in separate layer
+</Tip>
+
+## Mapping Layers
+
+Map object layers to broad phase layers:
+
+```c
+JPH_BroadPhaseLayerInterface* bpInterface = 
+    JPH_BroadPhaseLayerInterfaceTable_Create(NUM_LAYERS, 2);
+
+// Static objects → broad phase layer 0
+JPH_BroadPhaseLayerInterfaceTable_MapObjectToBroadPhaseLayer(
+    bpInterface, LAYER_NON_MOVING, 0);
+JPH_BroadPhaseLayerInterfaceTable_MapObjectToBroadPhaseLayer(
+    bpInterface, LAYER_TRIGGER, 0);
+
+// Dynamic objects → broad phase layer 1
+JPH_BroadPhaseLayerInterfaceTable_MapObjectToBroadPhaseLayer(
+    bpInterface, LAYER_MOVING, 1);
+JPH_BroadPhaseLayerInterfaceTable_MapObjectToBroadPhaseLayer(
+    bpInterface, LAYER_PLAYER, 1);
+JPH_BroadPhaseLayerInterfaceTable_MapObjectToBroadPhaseLayer(
+    bpInterface, LAYER_ENEMY, 1);
+JPH_BroadPhaseLayerInterfaceTable_MapObjectToBroadPhaseLayer(
+    bpInterface, LAYER_DEBRIS, 1);
+```
+
+## Collision Groups
+
+Collision groups provide per-body filtering:
+
+```c
+typedef struct JPH_CollisionGroup {
+    const JPH_GroupFilter* groupFilter;
+    JPH_CollisionGroupID groupID;
+    JPH_CollisionSubGroupID subGroupID;
+} JPH_CollisionGroup;
+
+typedef uint32_t JPH_CollisionGroupID;
+typedef uint32_t JPH_CollisionSubGroupID;
+```
+
+### Group Filter Table
+
+Create a collision group filter:
+
+```c
+// Create table with 4 sub-groups
+JPH_GroupFilterTable* groupFilter = JPH_GroupFilterTable_Create(4);
+
+// Disable collision between sub-group 0 and 1
+JPH_GroupFilterTable_DisableCollision(groupFilter, 0, 1);
+
+// Enable collision between sub-group 1 and 2
+JPH_GroupFilterTable_EnableCollision(groupFilter, 1, 2);
+
+// Check if groups collide
+bool canCollide = JPH_GroupFilterTable_IsCollisionEnabled(groupFilter, 0, 1);
+```
+
+### Setting Body Collision Group
+
+```c
+JPH_CollisionGroup group = {
+    .groupFilter = (const JPH_GroupFilter*)groupFilter,
+    .groupID = 1,
+    .subGroupID = 0
+};
+
+// Set during creation
+JPH_BodyCreationSettings_SetCollisionGroup(settings, &group);
+
+// Or modify existing body
+JPH_BodyInterface_SetCollisionGroup(bodyInterface, bodyID, &group);
+
+// Get current group
+JPH_CollisionGroup currentGroup;
+JPH_BodyInterface_GetCollisionGroup(bodyInterface, bodyID, &currentGroup);
+```
+
+<Note>
+  Use collision groups for:
+  - Ragdoll self-collision filtering
+  - Vehicle parts not colliding with each other
+  - Player not colliding with their own projectiles
+</Note>
+
+## Custom Filters
+
+Implement custom collision filtering logic:
+
+### Body Filter
+
+Filter based on body ID:
+
+```c
+bool MyBodyFilterCallback(void* userData, JPH_BodyID bodyID) {
+    // Skip specific bodies
+    if (bodyID == myPlayerBodyID) {
+        return false;  // Don't collide
+    }
+    return true;  // Collide with all others
+}
+
+JPH_BodyFilter_Procs bodyFilterProcs = {
+    .ShouldCollide = MyBodyFilterCallback,
+    .ShouldCollideLocked = MyBodyFilterCallback
+};
+
+JPH_BodyFilter_SetProcs(&bodyFilterProcs);
+JPH_BodyFilter* bodyFilter = JPH_BodyFilter_Create(userData);
+```
+
+### Shape Filter
+
+Filter based on shape or sub-shape:
+
+```c
+bool MyShapeFilterCallback(
+    void* userData,
+    const JPH_Shape* shape1,
+    const JPH_SubShapeID* subShapeID1,
+    const JPH_Shape* shape2,
+    const JPH_SubShapeID* subShapeID2
+) {
+    // Get user data from shapes
+    uint64_t userData1 = JPH_Shape_GetUserData(shape1);
+    uint64_t userData2 = JPH_Shape_GetUserData(shape2);
+    
+    // Custom filtering logic
+    return userData1 != userData2;
+}
+
+JPH_ShapeFilter_Procs shapeFilterProcs = {
+    .ShouldCollide = NULL,  // Unused in this example
+    .ShouldCollide2 = MyShapeFilterCallback
+};
+
+JPH_ShapeFilter_SetProcs(&shapeFilterProcs);
+JPH_ShapeFilter* shapeFilter = JPH_ShapeFilter_Create(userData);
+```
+
+### Object Layer Filter
+
+Filter during queries:
+
+```c
+bool MyObjectLayerFilterCallback(void* userData, JPH_ObjectLayer layer) {
+    // Only collide with moving objects
+    return layer == LAYER_MOVING || layer == LAYER_PLAYER;
+}
+
+JPH_ObjectLayerFilter_Procs filterProcs = {
+    .ShouldCollide = MyObjectLayerFilterCallback
+};
+
+JPH_ObjectLayerFilter_SetProcs(&filterProcs);
+JPH_ObjectLayerFilter* layerFilter = JPH_ObjectLayerFilter_Create(userData);
+```
+
+## Collision Queries
+
+Query the physics world for collisions:
+
+### Ray Casting
+
+```c
+JPH_RVec3 origin = { 0.0f, 10.0f, 0.0f };
+JPH_Vec3 direction = { 0.0f, -1.0f, 0.0f };  // Normalized
+
+JPH_NarrowPhaseQuery* narrowPhase = 
+    JPH_PhysicsSystem_GetNarrowPhaseQuery(system);
+
+JPH_RayCastResult hit;
+bool hasHit = JPH_NarrowPhaseQuery_CastRay(
+    narrowPhase,
+    &origin,
+    &direction,
+    &hit,
+    NULL,  // broadPhaseLayerFilter
+    NULL,  // objectLayerFilter
+    NULL   // bodyFilter
+);
+
+if (hasHit) {
+    printf("Hit body %u at fraction %f\n", hit.bodyID, hit.fraction);
+    
+    // Calculate hit position
+    JPH_RVec3 hitPosition;
+    JPH_RRayCast_GetPointOnRay(&origin, &direction, hit.fraction, &hitPosition);
+}
+```
+
+### Ray Cast Settings
+
+```c
+JPH_RayCastSettings settings = {
+    .backFaceModeTriangles = JPH_BackFaceMode_IgnoreBackFaces,
+    .backFaceModeConvex = JPH_BackFaceMode_IgnoreBackFaces,
+    .treatConvexAsSolid = true
+};
+
+typedef enum JPH_BackFaceMode {
+    JPH_BackFaceMode_IgnoreBackFaces,
+    JPH_BackFaceMode_CollideWithBackFaces,
+} JPH_BackFaceMode;
+```
+
+### Shape Casting
+
+Cast a shape through space:
+
+```c
+JPH_SphereShape* sphere = JPH_SphereShape_Create(0.5f);
+JPH_RMat4 startTransform;
+JPH_RMat4_Identity(&startTransform);
+
+JPH_Vec3 direction = { 10.0f, 0.0f, 0.0f };
+JPH_RVec3 baseOffset = { 0.0f, 0.0f, 0.0f };
+
+JPH_ShapeCastSettings castSettings;
+JPH_ShapeCastSettings_Init(&castSettings);
+
+JPH_ShapeCastResult result;
+// Use collector callback for multiple hits
+```
+
+### Point Queries
+
+Find bodies at a specific point:
+
+```c
+JPH_RVec3 point = { 5.0f, 0.0f, 5.0f };
+
+void PointHitCallback(void* userData, const JPH_CollidePointResult* result) {
+    printf("Found body %u at point\n", result->bodyID);
+}
+
+JPH_NarrowPhaseQuery_CollidePoint2(
+    narrowPhase,
+    &point,
+    JPH_CollisionCollectorType_AllHit,
+    PointHitCallback,
+    userData,
+    NULL,  // broadPhaseLayerFilter
+    NULL,  // objectLayerFilter
+    NULL,  // bodyFilter
+    NULL   // shapeFilter
+);
+```
+
+### Shape Overlap
+
+Test if a shape overlaps other bodies:
+
+```c
+JPH_BoxShape* box = JPH_BoxShape_Create(&(JPH_Vec3){1.0f, 1.0f, 1.0f}, 0.0f);
+JPH_RMat4 transform;
+JPH_RMat4_Translation(&transform, &(JPH_RVec3){5.0f, 0.0f, 5.0f});
+
+JPH_Vec3 scale = { 1.0f, 1.0f, 1.0f };
+JPH_RVec3 baseOffset = { 0.0f, 0.0f, 0.0f };
+
+JPH_CollideShapeSettings collideSettings;
+JPH_CollideShapeSettings_Init(&collideSettings);
+
+void ShapeHitCallback(void* userData, const JPH_CollideShapeResult* result) {
+    printf("Overlap with body %u, penetration: %f\n", 
+           result->bodyID2, 
+           result->penetrationDepth);
+}
+
+JPH_NarrowPhaseQuery_CollideShape2(
+    narrowPhase,
+    (const JPH_Shape*)box,
+    &scale,
+    &transform,
+    &collideSettings,
+    &baseOffset,
+    JPH_CollisionCollectorType_AllHit,
+    ShapeHitCallback,
+    userData,
+    NULL, NULL, NULL, NULL
+);
+```
+
+## Collision Events
+
+Receive callbacks when collisions occur:
+
+```c
+typedef enum JPH_ValidateResult {
+    JPH_ValidateResult_AcceptAllContactsForThisBodyPair = 0,
+    JPH_ValidateResult_AcceptContact = 1,
+    JPH_ValidateResult_RejectContact = 2,
+    JPH_ValidateResult_RejectAllContactsForThisBodyPair = 3,
+} JPH_ValidateResult;
+
+JPH_ValidateResult OnContactValidate(
+    void* userData,
+    const JPH_Body* body1,
+    const JPH_Body* body2,
+    const JPH_RVec3* baseOffset,
+    const JPH_CollideShapeResult* collisionResult
+) {
+    // Reject collisions based on custom logic
+    return JPH_ValidateResult_AcceptContact;
+}
+
+void OnContactAdded(
+    void* userData,
+    const JPH_Body* body1,
+    const JPH_Body* body2,
+    const JPH_ContactManifold* manifold,
+    JPH_ContactSettings* settings
+) {
+    // New collision detected
+    JPH_Vec3 normal;
+    JPH_ContactManifold_GetWorldSpaceNormal(manifold, &normal);
+    
+    float penetration = JPH_ContactManifold_GetPenetrationDepth(manifold);
+    
+    // Modify contact properties
+    settings->combinedFriction = 0.5f;
+    settings->combinedRestitution = 0.3f;
+}
+
+void OnContactPersisted(
+    void* userData,
+    const JPH_Body* body1,
+    const JPH_Body* body2,
+    const JPH_ContactManifold* manifold,
+    JPH_ContactSettings* settings
+) {
+    // Existing collision still active
+}
+
+void OnContactRemoved(
+    void* userData,
+    const JPH_SubShapeIDPair* subShapePair
+) {
+    // Collision ended
+}
+
+JPH_ContactListener_Procs contactProcs = {
+    .OnContactValidate = OnContactValidate,
+    .OnContactAdded = OnContactAdded,
+    .OnContactPersisted = OnContactPersisted,
+    .OnContactRemoved = OnContactRemoved
+};
+
+JPH_ContactListener_SetProcs(&contactProcs);
+JPH_ContactListener* listener = JPH_ContactListener_Create(userData);
+JPH_PhysicsSystem_SetContactListener(system, listener);
+```
+
+## Contact Manifold
+
+Access contact point information:
+
+```c
+void OnContactAdded(
+    void* userData,
+    const JPH_Body* body1,
+    const JPH_Body* body2,
+    const JPH_ContactManifold* manifold,
+    JPH_ContactSettings* settings
+) {
+    // Get contact normal
+    JPH_Vec3 normal;
+    JPH_ContactManifold_GetWorldSpaceNormal(manifold, &normal);
+    
+    // Get penetration depth
+    float depth = JPH_ContactManifold_GetPenetrationDepth(manifold);
+    
+    // Get sub-shape IDs
+    JPH_SubShapeID subShapeID1 = JPH_ContactManifold_GetSubShapeID1(manifold);
+    JPH_SubShapeID subShapeID2 = JPH_ContactManifold_GetSubShapeID2(manifold);
+    
+    // Iterate contact points
+    uint32_t numPoints = JPH_ContactManifold_GetPointCount(manifold);
+    for (uint32_t i = 0; i < numPoints; ++i) {
+        JPH_RVec3 point1, point2;
+        JPH_ContactManifold_GetWorldSpaceContactPointOn1(manifold, i, &point1);
+        JPH_ContactManifold_GetWorldSpaceContactPointOn2(manifold, i, &point2);
+    }
+}
+```
+
+## Broad Phase Query
+
+Direct broad phase queries (AABB-based):
+
+```c
+JPH_BroadPhaseQuery* broadPhase = 
+    JPH_PhysicsSystem_GetBroadPhaseQuery(system);
+
+// Ray cast (broad phase only)
+float RayCastCallback(void* userData, const JPH_BroadPhaseCastResult* result) {
+    printf("Broad phase hit body %u\n", result->bodyID);
+    return result->fraction;  // Continue searching
+}
+
+JPH_Vec3 origin = { 0.0f, 0.0f, 0.0f };
+JPH_Vec3 direction = { 1.0f, 0.0f, 0.0f };
+
+JPH_BroadPhaseQuery_CastRay(
+    broadPhase,
+    &origin,
+    &direction,
+    RayCastCallback,
+    userData,
+    NULL,  // broadPhaseLayerFilter
+    NULL   // objectLayerFilter
+);
+
+// AABB query
+void AABoxCallback(void* userData, JPH_BodyID bodyID) {
+    printf("Body %u inside box\n", bodyID);
+}
+
+JPH_AABox box = {
+    .min = { -10.0f, -10.0f, -10.0f },
+    .max = {  10.0f,  10.0f,  10.0f }
+};
+
+JPH_BroadPhaseQuery_CollideAABox(
+    broadPhase,
+    &box,
+    AABoxCallback,
+    userData,
+    NULL, NULL
+);
+```
+
+## Performance Optimization
+
+<Tip>
+  1. **Use fewer broad phase layers**: 2-4 is ideal
+  2. **Design efficient object layers**: Group similar objects together
+  3. **Use collision groups sparingly**: They're checked per-pair
+  4. **Disable unnecessary contacts**: Use `JPH_ValidateResult_RejectContact`
+  5. **Put static objects to sleep**: Don't activate unless necessary
+  6. **Use broad phase queries**: When you only need AABB checks
+</Tip>
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Physics System" icon="gears" href="/core/physics-system">
+    Set up the collision system
+  </Card>
+  <Card title="Bodies" icon="cube" href="/core/bodies">
+    Create bodies with object layers
+  </Card>
+  <Card title="Shapes" icon="shapes" href="/core/shapes">
+    Choose the right collision shapes
+  </Card>
+</CardGroup>

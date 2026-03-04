@@ -1,0 +1,507 @@
+---
+title: Contact Listeners
+description: Callbacks for collision events and contact processing
+---
+
+## Overview
+
+Contact listeners allow you to respond to collision events in JoltC. The contact listener is called at various stages of the collision detection and resolution process.
+
+## Contact Listener
+
+The main interface for receiving collision events.
+
+### Create Contact Listener
+
+<CodeGroup>
+```c Setup and Create
+typedef struct JPH_ContactListener_Procs {
+    JPH_ValidateResult (*OnContactValidate)(
+        void* userData,
+        const JPH_Body* body1,
+        const JPH_Body* body2,
+        const JPH_RVec3* baseOffset,
+        const JPH_CollideShapeResult* collisionResult
+    );
+    
+    void (*OnContactAdded)(
+        void* userData,
+        const JPH_Body* body1,
+        const JPH_Body* body2,
+        const JPH_ContactManifold* manifold,
+        JPH_ContactSettings* settings
+    );
+    
+    void (*OnContactPersisted)(
+        void* userData,
+        const JPH_Body* body1,
+        const JPH_Body* body2,
+        const JPH_ContactManifold* manifold,
+        JPH_ContactSettings* settings
+    );
+    
+    void (*OnContactRemoved)(
+        void* userData,
+        const JPH_SubShapeIDPair* subShapePair
+    );
+} JPH_ContactListener_Procs;
+
+void JPH_ContactListener_SetProcs(const JPH_ContactListener_Procs* procs);
+
+JPH_ContactListener* JPH_ContactListener_Create(void* userData);
+void JPH_ContactListener_Destroy(JPH_ContactListener* listener);
+```
+</CodeGroup>
+
+Set up callbacks and create a contact listener.
+
+<ParamField path="userData" type="void*">
+  User data passed to all callbacks
+</ParamField>
+
+### Set on Physics System
+
+<CodeGroup>
+```c JPH_PhysicsSystem_SetContactListener
+void JPH_PhysicsSystem_SetContactListener(
+    JPH_PhysicsSystem* system,
+    JPH_ContactListener* listener
+);
+```
+</CodeGroup>
+
+Attach the contact listener to the physics system.
+
+## Callback Functions
+
+### OnContactValidate
+
+<ParamField path="OnContactValidate" type="callback">
+  Called when two bodies are about to collide. Allows you to reject the collision before contact points are generated.
+  
+  **Parameters:**
+  - `userData` - User data from listener creation
+  - `body1` - First body in collision
+  - `body2` - Second body in collision
+  - `baseOffset` - Base offset for collision result
+  - `collisionResult` - Initial collision detection result
+  
+  **Returns:** One of:
+  - `JPH_ValidateResult_AcceptAllContactsForThisBodyPair` - Accept this and all future contacts
+  - `JPH_ValidateResult_AcceptContact` - Accept this contact
+  - `JPH_ValidateResult_RejectContact` - Reject this contact
+  - `JPH_ValidateResult_RejectAllContactsForThisBodyPair` - Reject this and all future contacts
+</ParamField>
+
+<CodeGroup>
+```c Example
+JPH_ValidateResult on_contact_validate(
+    void* userData,
+    const JPH_Body* body1,
+    const JPH_Body* body2,
+    const JPH_RVec3* baseOffset,
+    const JPH_CollideShapeResult* result
+) {
+    // Don't allow penetration deeper than 1 meter
+    if (result->penetrationDepth > 1.0f) {
+        return JPH_ValidateResult_RejectContact;
+    }
+    
+    return JPH_ValidateResult_AcceptContact;
+}
+```
+</CodeGroup>
+
+### OnContactAdded
+
+<ParamField path="OnContactAdded" type="callback">
+  Called when a new contact point is detected. Allows modification of contact properties.
+  
+  **Parameters:**
+  - `userData` - User data
+  - `body1` - First body
+  - `body2` - Second body
+  - `manifold` - Contact manifold containing contact points
+  - `settings` - Contact settings (can be modified)
+</ParamField>
+
+<CodeGroup>
+```c Example
+void on_contact_added(
+    void* userData,
+    const JPH_Body* body1,
+    const JPH_Body* body2,
+    const JPH_ContactManifold* manifold,
+    JPH_ContactSettings* settings
+) {
+    // Increase friction for specific collision
+    settings->combinedFriction = 2.0f;
+    
+    // Disable restitution
+    settings->combinedRestitution = 0.0f;
+    
+    // Print contact info
+    uint32_t num_points = JPH_ContactManifold_GetPointCount(manifold);
+    printf("Contact added: %u contact points\n", num_points);
+}
+```
+</CodeGroup>
+
+### OnContactPersisted
+
+<ParamField path="OnContactPersisted" type="callback">
+  Called each frame while two bodies remain in contact.
+  
+  **Parameters:**
+  - `userData` - User data
+  - `body1` - First body
+  - `body2` - Second body
+  - `manifold` - Updated contact manifold
+  - `settings` - Contact settings (can be modified)
+</ParamField>
+
+<CodeGroup>
+```c Example
+void on_contact_persisted(
+    void* userData,
+    const JPH_Body* body1,
+    const JPH_Body* body2,
+    const JPH_ContactManifold* manifold,
+    JPH_ContactSettings* settings
+) {
+    // Track how long objects have been in contact
+    MyGameContext* ctx = (MyGameContext*)userData;
+    ctx->contact_time += ctx->delta_time;
+    
+    // Gradually increase friction
+    settings->combinedFriction = 0.5f + ctx->contact_time * 0.1f;
+}
+```
+</CodeGroup>
+
+### OnContactRemoved
+
+<ParamField path="OnContactRemoved" type="callback">
+  Called when contact between two bodies ends.
+  
+  **Parameters:**
+  - `userData` - User data
+  - `subShapePair` - Identifies which sub-shapes were in contact
+</ParamField>
+
+<CodeGroup>
+```c Example
+void on_contact_removed(
+    void* userData,
+    const JPH_SubShapeIDPair* subShapePair
+) {
+    printf("Contact removed between bodies %u and %u\n",
+        subShapePair->Body1ID, subShapePair->Body2ID);
+}
+```
+</CodeGroup>
+
+## Contact Manifold
+
+Provides information about contact points between two bodies.
+
+### Get World Space Normal
+
+<CodeGroup>
+```c JPH_ContactManifold_GetWorldSpaceNormal
+void JPH_ContactManifold_GetWorldSpaceNormal(
+    const JPH_ContactManifold* manifold,
+    JPH_Vec3* result
+);
+```
+</CodeGroup>
+
+Get the contact normal in world space.
+
+### Get Penetration Depth
+
+<CodeGroup>
+```c JPH_ContactManifold_GetPenetrationDepth
+float JPH_ContactManifold_GetPenetrationDepth(
+    const JPH_ContactManifold* manifold
+);
+```
+</CodeGroup>
+
+Get how deep the shapes are penetrating.
+
+### Get Sub-Shape IDs
+
+<CodeGroup>
+```c Get Sub-Shapes
+JPH_SubShapeID JPH_ContactManifold_GetSubShapeID1(
+    const JPH_ContactManifold* manifold
+);
+
+JPH_SubShapeID JPH_ContactManifold_GetSubShapeID2(
+    const JPH_ContactManifold* manifold
+);
+```
+</CodeGroup>
+
+Get the sub-shape IDs for compound shapes.
+
+### Get Contact Points
+
+<CodeGroup>
+```c Contact Points
+uint32_t JPH_ContactManifold_GetPointCount(
+    const JPH_ContactManifold* manifold
+);
+
+void JPH_ContactManifold_GetWorldSpaceContactPointOn1(
+    const JPH_ContactManifold* manifold,
+    uint32_t index,
+    JPH_RVec3* result
+);
+
+void JPH_ContactManifold_GetWorldSpaceContactPointOn2(
+    const JPH_ContactManifold* manifold,
+    uint32_t index,
+    JPH_RVec3* result
+);
+```
+</CodeGroup>
+
+Retrieve individual contact points from the manifold.
+
+<ParamField path="index" type="uint32_t">
+  Contact point index (0 to GetPointCount() - 1)
+</ParamField>
+
+## Contact Settings
+
+Structure for modifying contact properties.
+
+<CodeGroup>
+```c JPH_ContactSettings Structure
+typedef struct JPH_ContactSettings {
+    float combinedFriction;              // Combined friction coefficient
+    float combinedRestitution;           // Combined restitution (bounciness)
+    float invMassScale1;                 // Inverse mass scale for body 1
+    float invInertiaScale1;              // Inverse inertia scale for body 1
+    float invMassScale2;                 // Inverse mass scale for body 2
+    float invInertiaScale2;              // Inverse inertia scale for body 2
+    JPH_Bool isSensor;                   // Treat as sensor (no collision response)
+    JPH_Vec3 relativeLinearSurfaceVelocity;  // Surface velocity
+    JPH_Vec3 relativeAngularSurfaceVelocity; // Angular surface velocity
+} JPH_ContactSettings;
+```
+</CodeGroup>
+
+## Body Activation Listener
+
+Receive notifications when bodies activate or deactivate (sleep/wake).
+
+<CodeGroup>
+```c Create Activation Listener
+typedef struct JPH_BodyActivationListener_Procs {
+    void (*OnBodyActivated)(
+        void* userData,
+        JPH_BodyID bodyID,
+        uint64_t bodyUserData
+    );
+    
+    void (*OnBodyDeactivated)(
+        void* userData,
+        JPH_BodyID bodyID,
+        uint64_t bodyUserData
+    );
+} JPH_BodyActivationListener_Procs;
+
+void JPH_BodyActivationListener_SetProcs(
+    const JPH_BodyActivationListener_Procs* procs
+);
+
+JPH_BodyActivationListener* JPH_BodyActivationListener_Create(void* userData);
+void JPH_BodyActivationListener_Destroy(JPH_BodyActivationListener* listener);
+```
+</CodeGroup>
+
+### Set on Physics System
+
+<CodeGroup>
+```c JPH_PhysicsSystem_SetBodyActivationListener
+void JPH_PhysicsSystem_SetBodyActivationListener(
+    JPH_PhysicsSystem* system,
+    JPH_BodyActivationListener* listener
+);
+```
+</CodeGroup>
+
+<ParamField path="OnBodyActivated" type="callback">
+  Called when a body wakes up and starts simulating.
+  
+  **Parameters:**
+  - `userData` - User data
+  - `bodyID` - The body that activated
+  - `bodyUserData` - User data stored on the body
+</ParamField>
+
+<ParamField path="OnBodyDeactivated" type="callback">
+  Called when a body goes to sleep.
+</ParamField>
+
+## Example: Complete Contact Listener
+
+<CodeGroup>
+```c Full Implementation
+typedef struct GameContactContext {
+    uint32_t collision_count;
+    float total_impact;
+} GameContactContext;
+
+JPH_ValidateResult game_validate_contact(
+    void* userData,
+    const JPH_Body* body1,
+    const JPH_Body* body2,
+    const JPH_RVec3* baseOffset,
+    const JPH_CollideShapeResult* result
+) {
+    // Reject collisions if bodies are sensors
+    if (JPH_Body_IsSensor(body1) || JPH_Body_IsSensor(body2)) {
+        return JPH_ValidateResult_RejectContact;
+    }
+    
+    return JPH_ValidateResult_AcceptContact;
+}
+
+void game_contact_added(
+    void* userData,
+    const JPH_Body* body1,
+    const JPH_Body* body2,
+    const JPH_ContactManifold* manifold,
+    JPH_ContactSettings* settings
+) {
+    GameContactContext* ctx = (GameContactContext*)userData;
+    ctx->collision_count++;
+    
+    // Get impact velocity
+    JPH_Vec3 vel1, vel2;
+    JPH_Body_GetLinearVelocity((JPH_Body*)body1, &vel1);
+    JPH_Body_GetLinearVelocity((JPH_Body*)body2, &vel2);
+    
+    JPH_Vec3 relative_vel;
+    JPH_Vec3_Subtract(&vel1, &vel2, &relative_vel);
+    float impact = JPH_Vec3_Length(&relative_vel);
+    
+    ctx->total_impact += impact;
+    
+    // Play sound for high-impact collisions
+    if (impact > 5.0f) {
+        printf("High impact collision: %.2f m/s\n", impact);
+    }
+    
+    // Modify friction based on materials
+    uint64_t user_data1 = JPH_Body_GetUserData((JPH_Body*)body1);
+    uint64_t user_data2 = JPH_Body_GetUserData((JPH_Body*)body2);
+    
+    if (user_data1 == MATERIAL_ICE || user_data2 == MATERIAL_ICE) {
+        settings->combinedFriction = 0.05f; // Very slippery
+    }
+}
+
+void game_contact_persisted(
+    void* userData,
+    const JPH_Body* body1,
+    const JPH_Body* body2,
+    const JPH_ContactManifold* manifold,
+    JPH_ContactSettings* settings
+) {
+    // Could track resting contacts here
+}
+
+void game_contact_removed(
+    void* userData,
+    const JPH_SubShapeIDPair* subShapePair
+) {
+    // Cleanup or trigger effects when contact ends
+}
+
+// Setup
+GameContactContext context = {0, 0.0f};
+
+JPH_ContactListener_Procs procs = {
+    .OnContactValidate = game_validate_contact,
+    .OnContactAdded = game_contact_added,
+    .OnContactPersisted = game_contact_persisted,
+    .OnContactRemoved = game_contact_removed
+};
+
+JPH_ContactListener_SetProcs(&procs);
+
+JPH_ContactListener* listener = JPH_ContactListener_Create(&context);
+JPH_PhysicsSystem_SetContactListener(physics_system, listener);
+
+// Later cleanup
+JPH_ContactListener_Destroy(listener);
+```
+</CodeGroup>
+
+## Example: Surface Effects
+
+<CodeGroup>
+```c Conveyor Belt Effect
+void conveyor_contact_added(
+    void* userData,
+    const JPH_Body* body1,
+    const JPH_Body* body2,
+    const JPH_ContactManifold* manifold,
+    JPH_ContactSettings* settings
+) {
+    // Check if body1 is a conveyor belt
+    uint64_t user_data1 = JPH_Body_GetUserData((JPH_Body*)body1);
+    
+    if (user_data1 == OBJECT_TYPE_CONVEYOR) {
+        // Set surface velocity to move objects along the belt
+        settings->relativeLinearSurfaceVelocity.x = 2.0f;
+        settings->relativeLinearSurfaceVelocity.y = 0.0f;
+        settings->relativeLinearSurfaceVelocity.z = 0.0f;
+        
+        // Increase friction to prevent sliding off
+        settings->combinedFriction = 1.5f;
+    }
+}
+```
+</CodeGroup>
+
+## Example: One-Way Platforms
+
+<CodeGroup>
+```c Platform Collision
+JPH_ValidateResult platform_validate(
+    void* userData,
+    const JPH_Body* body1,
+    const JPH_Body* body2,
+    const JPH_RVec3* baseOffset,
+    const JPH_CollideShapeResult* result
+) {
+    uint64_t user_data1 = JPH_Body_GetUserData((JPH_Body*)body1);
+    
+    if (user_data1 == OBJECT_TYPE_PLATFORM) {
+        // Get collision normal
+        JPH_Vec3 normal = result->penetrationAxis;
+        
+        // Only collide if approaching from above
+        if (normal.y > 0.7f) { // ~45 degree cone upward
+            return JPH_ValidateResult_AcceptContact;
+        }
+        
+        return JPH_ValidateResult_RejectContact;
+    }
+    
+    return JPH_ValidateResult_AcceptContact;
+}
+```
+</CodeGroup>
+
+## See Also
+
+- [Collision Queries](/api/collision/queries) - Raycasting and collision detection
+- [Collision Filters](/api/collision/filters) - Layer and collision filtering
+- [Body Interface](/api/body-interface) - Body manipulation

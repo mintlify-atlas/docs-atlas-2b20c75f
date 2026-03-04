@@ -1,0 +1,146 @@
+---
+title: Initialization
+description: Core initialization and shutdown functions for JoltC
+---
+
+## Overview
+
+The initialization API provides functions to set up and tear down the JoltC physics engine, as well as configure error and trace handlers.
+
+## Functions
+
+### JPH_Init
+
+Initializes the JoltC physics engine.
+
+```c
+bool JPH_Init(void);
+```
+
+<ParamField path="return" type="bool">
+  Returns `true` if initialization was successful, `false` otherwise.
+</ParamField>
+
+<Note>
+  You must call `JPH_Init` before using any other JoltC functions. Call `JPH_Shutdown` when you're done to clean up resources.
+</Note>
+
+---
+
+### JPH_Shutdown
+
+Shuts down the JoltC physics engine and frees all resources.
+
+```c
+void JPH_Shutdown(void);
+```
+
+<Warning>
+  After calling `JPH_Shutdown`, you must not use any JoltC objects or functions until you call `JPH_Init` again.
+</Warning>
+
+---
+
+### JPH_SetTraceHandler
+
+Sets a custom trace message handler for debugging and logging.
+
+```c
+void JPH_SetTraceHandler(JPH_TraceFunc handler);
+```
+
+<ParamField path="handler" type="JPH_TraceFunc">
+  Function pointer to the trace handler. The handler receives trace messages from the physics engine.
+</ParamField>
+
+**Callback Signature:**
+
+```c
+typedef void (JPH_API_CALL* JPH_TraceFunc)(const char* message);
+```
+
+<ParamField path="message" type="const char*">
+  The trace message string.
+</ParamField>
+
+---
+
+### JPH_SetAssertFailureHandler
+
+Sets a custom assertion failure handler for debugging.
+
+```c
+void JPH_SetAssertFailureHandler(JPH_AssertFailureFunc handler);
+```
+
+<ParamField path="handler" type="JPH_AssertFailureFunc">
+  Function pointer to the assertion failure handler. Called when an assertion fails in the physics engine.
+</ParamField>
+
+**Callback Signature:**
+
+```c
+typedef bool (JPH_API_CALL* JPH_AssertFailureFunc)(
+    const char* expression,
+    const char* message,
+    const char* file,
+    uint32_t line
+);
+```
+
+<ParamField path="expression" type="const char*">
+  The assertion expression that failed.
+</ParamField>
+
+<ParamField path="message" type="const char*">
+  Optional message describing the assertion failure.
+</ParamField>
+
+<ParamField path="file" type="const char*">
+  Source file where the assertion failed.
+</ParamField>
+
+<ParamField path="line" type="uint32_t">
+  Line number where the assertion failed.
+</ParamField>
+
+<ParamField path="return" type="bool">
+  Return `true` to trigger a breakpoint, `false` to continue execution.
+</ParamField>
+
+## Example
+
+```c
+#include <joltc.h>
+#include <stdio.h>
+
+void MyTraceHandler(const char* message) {
+    printf("[JoltC] %s\n", message);
+}
+
+bool MyAssertHandler(const char* expression, const char* message, 
+                     const char* file, uint32_t line) {
+    fprintf(stderr, "Assertion failed: %s\n", expression);
+    fprintf(stderr, "  Message: %s\n", message ? message : "(none)");
+    fprintf(stderr, "  File: %s:%u\n", file, line);
+    return true; // Trigger debugger
+}
+
+int main() {
+    // Set up handlers before initialization
+    JPH_SetTraceHandler(MyTraceHandler);
+    JPH_SetAssertFailureHandler(MyAssertHandler);
+    
+    // Initialize the physics engine
+    if (!JPH_Init()) {
+        fprintf(stderr, "Failed to initialize JoltC\n");
+        return 1;
+    }
+    
+    // ... use JoltC ...
+    
+    // Clean up
+    JPH_Shutdown();
+    return 0;
+}
+```

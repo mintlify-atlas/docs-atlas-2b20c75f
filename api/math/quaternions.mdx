@@ -1,0 +1,403 @@
+---
+title: 'Quaternions'
+description: 'Quaternion math for 3D rotations'
+---
+
+Quaternions provide a compact and efficient way to represent 3D rotations without gimbal lock.
+
+## Type
+
+### JPH_Quat
+
+4-component quaternion structure.
+
+```c
+typedef struct JPH_Quat {
+    float x;
+    float y;
+    float z;
+    float w;
+} JPH_Quat;
+```
+
+A normalized quaternion represents a rotation. The identity rotation is `(0, 0, 0, 1)`.
+
+## Creation and Conversion
+
+### JPH_Quat_FromTo
+
+```c
+void JPH_Quat_FromTo(const JPH_Vec3* from, const JPH_Vec3* to, JPH_Quat* quat)
+```
+
+Create a quaternion that rotates from one direction to another.
+
+<ParamField path="from" type="const JPH_Vec3*">
+  Source direction vector
+</ParamField>
+
+<ParamField path="to" type="const JPH_Vec3*">
+  Target direction vector
+</ParamField>
+
+```c
+JPH_Vec3 forward = { 0.0f, 0.0f, 1.0f };
+JPH_Vec3 right = { 1.0f, 0.0f, 0.0f };
+JPH_Quat rotation;
+JPH_Quat_FromTo(&forward, &right, &rotation);
+// Creates a 90° rotation around Y-axis
+```
+
+### JPH_Quat_FromEulerAngles
+
+```c
+void JPH_Quat_FromEulerAngles(const JPH_Vec3* angles, JPH_Quat* result)
+```
+
+Create a quaternion from Euler angles (in radians).
+
+<ParamField path="angles" type="const JPH_Vec3*">
+  Euler angles as (pitch, yaw, roll) in radians
+</ParamField>
+
+```c
+JPH_Vec3 angles = { 0.0f, 1.5708f, 0.0f };  // 90° yaw
+JPH_Quat rotation;
+JPH_Quat_FromEulerAngles(&angles, &rotation);
+```
+
+### JPH_Quat_GetEulerAngles
+
+```c
+void JPH_Quat_GetEulerAngles(const JPH_Quat* quat, JPH_Vec3* result)
+```
+
+Convert a quaternion to Euler angles (in radians).
+
+### JPH_Quat_GetAxisAngle
+
+```c
+void JPH_Quat_GetAxisAngle(const JPH_Quat* quat, JPH_Vec3* outAxis, float* outAngle)
+```
+
+Get the rotation axis and angle from a quaternion.
+
+<ParamField path="outAxis" type="JPH_Vec3*">
+  Output rotation axis (normalized)
+</ParamField>
+
+<ParamField path="outAngle" type="float*">
+  Output rotation angle in radians
+</ParamField>
+
+```c
+JPH_Quat rotation = { 0.0f, 0.707f, 0.0f, 0.707f };  // 90° around Y
+JPH_Vec3 axis;
+float angle;
+JPH_Quat_GetAxisAngle(&rotation, &axis, &angle);
+// axis = (0, 1, 0), angle = π/2
+```
+
+## Arithmetic Operations
+
+### JPH_Quat_Add
+
+```c
+void JPH_Quat_Add(const JPH_Quat* q1, const JPH_Quat* q2, JPH_Quat* result)
+```
+
+Add two quaternions component-wise.
+
+### JPH_Quat_Subtract
+
+```c
+void JPH_Quat_Subtract(const JPH_Quat* q1, const JPH_Quat* q2, JPH_Quat* result)
+```
+
+Subtract q2 from q1 component-wise.
+
+### JPH_Quat_Multiply
+
+```c
+void JPH_Quat_Multiply(const JPH_Quat* q1, const JPH_Quat* q2, JPH_Quat* result)
+```
+
+Multiply two quaternions (combine rotations). Note: quaternion multiplication is not commutative.
+
+```c
+JPH_Quat rot1 = { 0.0f, 0.707f, 0.0f, 0.707f };  // 90° around Y
+JPH_Quat rot2 = { 0.707f, 0.0f, 0.0f, 0.707f };  // 90° around X
+JPH_Quat combined;
+JPH_Quat_Multiply(&rot1, &rot2, &combined);
+// First applies rot2, then rot1
+```
+
+### JPH_Quat_MultiplyScalar
+
+```c
+void JPH_Quat_MultiplyScalar(const JPH_Quat* q, float scalar, JPH_Quat* result)
+```
+
+Multiply all components by a scalar.
+
+### JPH_Quat_DivideScalar
+
+```c
+void JPH_Quat_DivideScalar(const JPH_Quat* q, float scalar, JPH_Quat* result)
+```
+
+Divide all components by a scalar.
+
+### JPH_Quat_Dot
+
+```c
+void JPH_Quat_Dot(const JPH_Quat* q1, const JPH_Quat* q2, float* result)
+```
+
+Calculate the dot product of two quaternions.
+
+## Inversion and Conjugation
+
+### JPH_Quat_Inversed
+
+```c
+void JPH_Quat_Inversed(const JPH_Quat* quat, JPH_Quat* result)
+```
+
+Get the inverse rotation. For normalized quaternions, this is the same as the conjugate.
+
+```c
+JPH_Quat rotation = { 0.0f, 0.707f, 0.0f, 0.707f };
+JPH_Quat inverse;
+JPH_Quat_Inversed(&rotation, &inverse);
+// Inverse rotates in the opposite direction
+```
+
+### JPH_Quat_Conjugated
+
+```c
+void JPH_Quat_Conjugated(const JPH_Quat* quat, JPH_Quat* result)
+```
+
+Get the conjugate (negates x, y, z components). For normalized quaternions, this equals the inverse.
+
+## Rotation Operations
+
+### JPH_Quat_Rotate
+
+```c
+void JPH_Quat_Rotate(const JPH_Quat* quat, const JPH_Vec3* vec, JPH_Vec3* result)
+```
+
+Rotate a vector by a quaternion.
+
+```c
+JPH_Quat rot = { 0.0f, 0.707f, 0.0f, 0.707f };  // 90° around Y
+JPH_Vec3 forward = { 0.0f, 0.0f, 1.0f };
+JPH_Vec3 rotated;
+JPH_Quat_Rotate(&rot, &forward, &rotated);
+// rotated ≈ (1, 0, 0) - now pointing right
+```
+
+### JPH_Quat_InverseRotate
+
+```c
+void JPH_Quat_InverseRotate(const JPH_Quat* quat, const JPH_Vec3* vec, JPH_Vec3* result)
+```
+
+Rotate a vector by the inverse of a quaternion.
+
+### JPH_Quat_RotateAxisX / Y / Z
+
+```c
+void JPH_Quat_RotateAxisX(const JPH_Quat* quat, JPH_Vec3* result)
+void JPH_Quat_RotateAxisY(const JPH_Quat* quat, JPH_Vec3* result)
+void JPH_Quat_RotateAxisZ(const JPH_Quat* quat, JPH_Vec3* result)
+```
+
+Get the rotated X, Y, or Z axis from the quaternion.
+
+```c
+JPH_Quat rotation = { 0.0f, 0.707f, 0.0f, 0.707f };
+
+JPH_Vec3 right, up, forward;
+JPH_Quat_RotateAxisX(&rotation, &right);
+JPH_Quat_RotateAxisY(&rotation, &up);
+JPH_Quat_RotateAxisZ(&rotation, &forward);
+// Gets the basis vectors after rotation
+```
+
+## Decomposition
+
+### JPH_Quat_GetTwist
+
+```c
+void JPH_Quat_GetTwist(const JPH_Quat* quat, const JPH_Vec3* axis, JPH_Quat* result)
+```
+
+Decompose the rotation into a twist around the specified axis.
+
+<ParamField path="axis" type="const JPH_Vec3*">
+  Axis to decompose around
+</ParamField>
+
+### JPH_Quat_GetSwingTwist
+
+```c
+void JPH_Quat_GetSwingTwist(const JPH_Quat* quat, JPH_Quat* outSwing, JPH_Quat* outTwist)
+```
+
+Decompose into swing and twist components.
+
+### JPH_Quat_GetPerpendicular
+
+```c
+void JPH_Quat_GetPerpendicular(const JPH_Quat* quat, JPH_Quat* result)
+```
+
+Get a quaternion perpendicular to this one.
+
+### JPH_Quat_GetRotationAngle
+
+```c
+float JPH_Quat_GetRotationAngle(const JPH_Quat* quat, const JPH_Vec3* axis)
+```
+
+Get the angle of rotation around a specific axis.
+
+## Interpolation
+
+### JPH_Quat_Lerp
+
+```c
+void JPH_Quat_Lerp(const JPH_Quat* from, const JPH_Quat* to, float fraction, JPH_Quat* result)
+```
+
+Linear interpolation between two quaternions. Faster than Slerp but doesn't maintain constant angular velocity.
+
+<ParamField path="fraction" type="float">
+  Interpolation factor (0.0 = from, 1.0 = to)
+</ParamField>
+
+### JPH_Quat_Slerp
+
+```c
+void JPH_Quat_Slerp(const JPH_Quat* from, const JPH_Quat* to, float fraction, JPH_Quat* result)
+```
+
+Spherical linear interpolation. Maintains constant angular velocity.
+
+```c
+JPH_Quat start = { 0.0f, 0.0f, 0.0f, 1.0f };  // identity
+JPH_Quat end = { 0.0f, 0.707f, 0.0f, 0.707f };  // 90° around Y
+
+JPH_Quat halfway;
+JPH_Quat_Slerp(&start, &end, 0.5f, &halfway);
+// halfway is 45° rotation around Y
+```
+
+## Example Usage
+
+### Basic Rotation
+
+```c
+// Create a rotation from direction vectors
+JPH_Vec3 currentDir = { 0.0f, 0.0f, 1.0f };  // forward
+JPH_Vec3 targetDir = { 1.0f, 0.0f, 0.0f };   // right
+
+JPH_Quat rotation;
+JPH_Quat_FromTo(&currentDir, &targetDir, &rotation);
+
+// Apply rotation to a point
+JPH_Vec3 point = { 0.0f, 1.0f, 5.0f };
+JPH_Vec3 rotatedPoint;
+JPH_Quat_Rotate(&rotation, &point, &rotatedPoint);
+```
+
+### Combining Rotations
+
+```c
+// Character rotation: first face target, then look up/down
+JPH_Quat yawRotation = { 0.0f, 0.707f, 0.0f, 0.707f };   // 90° yaw
+JPH_Quat pitchRotation = { 0.259f, 0.0f, 0.0f, 0.966f }; // 30° pitch
+
+JPH_Quat finalRotation;
+JPH_Quat_Multiply(&yawRotation, &pitchRotation, &finalRotation);
+
+// Apply to forward vector
+JPH_Vec3 forward = { 0.0f, 0.0f, 1.0f };
+JPH_Vec3 lookDirection;
+JPH_Quat_Rotate(&finalRotation, &forward, &lookDirection);
+```
+
+### Smooth Rotation
+
+```c
+// Smoothly rotate character to face target over time
+JPH_Quat currentRotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+JPH_Quat targetRotation = { 0.0f, 0.707f, 0.0f, 0.707f };
+
+float rotationSpeed = 2.0f;  // radians per second
+float deltaTime = 1.0f / 60.0f;
+float t = rotationSpeed * deltaTime;
+
+JPH_Quat newRotation;
+JPH_Quat_Slerp(&currentRotation, &targetRotation, t, &newRotation);
+
+// Update character rotation
+// currentRotation = newRotation;
+```
+
+### Convert Between Euler and Quaternion
+
+```c
+// From Euler angles (degrees to radians)
+float pitch = 30.0f * (JPH_M_PI / 180.0f);
+float yaw = 45.0f * (JPH_M_PI / 180.0f);
+float roll = 0.0f;
+
+JPH_Vec3 eulerAngles = { pitch, yaw, roll };
+JPH_Quat rotation;
+JPH_Quat_FromEulerAngles(&eulerAngles, &rotation);
+
+// Back to Euler angles
+JPH_Vec3 backToEuler;
+JPH_Quat_GetEulerAngles(&rotation, &backToEuler);
+
+// Convert radians to degrees
+float pitchDeg = backToEuler.x * (180.0f / JPH_M_PI);
+float yawDeg = backToEuler.y * (180.0f / JPH_M_PI);
+float rollDeg = backToEuler.z * (180.0f / JPH_M_PI);
+```
+
+### Getting Direction Vectors
+
+```c
+// Get the basis vectors from a rotation
+JPH_Quat cameraRotation = { 0.0f, 0.383f, 0.0f, 0.924f };  // ~45° yaw
+
+JPH_Vec3 right, up, forward;
+JPH_Quat_RotateAxisX(&cameraRotation, &right);
+JPH_Quat_RotateAxisY(&cameraRotation, &up);
+JPH_Quat_RotateAxisZ(&cameraRotation, &forward);
+
+// Use for camera movement
+JPH_Vec3 moveRight;
+JPH_Vec3_MultiplyScalar(&right, 5.0f, &moveRight);
+
+JPH_Vec3 moveForward;
+JPH_Vec3_MultiplyScalar(&forward, 10.0f, &moveForward);
+```
+
+## Notes
+
+- Quaternions must be normalized to represent valid rotations
+- Quaternion multiplication order matters: `q1 * q2` applies `q2` first, then `q1`
+- The identity quaternion is `(0, 0, 0, 1)`
+- Use Slerp for smooth rotation interpolation
+- Gimbal lock cannot occur with quaternions (unlike Euler angles)
+
+## See Also
+
+- [Vectors](/api/math/vectors) - Vector operations
+- [Matrices](/api/math/matrices) - Matrix operations and conversion

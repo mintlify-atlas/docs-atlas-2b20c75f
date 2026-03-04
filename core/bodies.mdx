@@ -1,0 +1,463 @@
+---
+title: 'Bodies'
+description: 'Creating and managing rigid bodies in JoltC'
+---
+
+Bodies are the fundamental simulation objects in JoltPhysics. They represent physical objects with mass, shape, and motion properties.
+
+## Body Types
+
+JoltC supports two main body types:
+
+```c
+typedef enum JPH_BodyType {
+    JPH_BodyType_Rigid = 0,  // Standard rigid body
+    JPH_BodyType_Soft = 1,   // Deformable soft body
+} JPH_BodyType;
+```
+
+This guide focuses on rigid bodies, which are the most commonly used.
+
+## Motion Types
+
+Every body has a motion type that determines how it behaves:
+
+```c
+typedef enum JPH_MotionType {
+    JPH_MotionType_Static = 0,     // Cannot move (infinite mass)
+    JPH_MotionType_Kinematic = 1,  // Moved manually (infinite mass)
+    JPH_MotionType_Dynamic = 2,    // Fully simulated (has mass)
+} JPH_MotionType;
+```
+
+<Info>
+  - **Static**: Terrain, buildings, walls (never moves)
+  - **Kinematic**: Elevators, moving platforms (controlled by code)
+  - **Dynamic**: Physics objects, characters (moved by forces)
+</Info>
+
+## Creating Bodies
+
+### Basic Creation
+
+Bodies are created using `JPH_BodyCreationSettings`:
+
+```c
+// Create a dynamic sphere
+JPH_SphereShape* sphereShape = JPH_SphereShape_Create(0.5f);
+JPH_Vec3 position = { 0.0f, 10.0f, 0.0f };
+JPH_Quat rotation = { 0.0f, 0.0f, 0.0f, 1.0f };  // Identity
+
+JPH_BodyCreationSettings* settings = JPH_BodyCreationSettings_Create3(
+    (const JPH_Shape*)sphereShape,
+    &position,
+    &rotation,
+    JPH_MotionType_Dynamic,
+    Layers::MOVING
+);
+
+// Create and add to physics system
+JPH_BodyInterface* bodyInterface = JPH_PhysicsSystem_GetBodyInterface(system);
+JPH_BodyID bodyID = JPH_BodyInterface_CreateAndAddBody(
+    bodyInterface, 
+    settings, 
+    JPH_Activation_Activate
+);
+
+JPH_BodyCreationSettings_Destroy(settings);
+```
+
+### Static Body Example
+
+```c
+// Create a static floor
+JPH_Vec3 boxHalfExtents = { 100.0f, 1.0f, 100.0f };
+JPH_BoxShape* floorShape = JPH_BoxShape_Create(
+    &boxHalfExtents, 
+    JPH_DEFAULT_CONVEX_RADIUS
+);
+
+JPH_Vec3 floorPosition = { 0.0f, -1.0f, 0.0f };
+JPH_BodyCreationSettings* floorSettings = JPH_BodyCreationSettings_Create3(
+    (const JPH_Shape*)floorShape,
+    &floorPosition,
+    NULL,  // Identity rotation
+    JPH_MotionType_Static,
+    Layers::NON_MOVING
+);
+
+JPH_BodyID floorID = JPH_BodyInterface_CreateAndAddBody(
+    bodyInterface,
+    floorSettings,
+    JPH_Activation_DontActivate  // Static bodies don't need activation
+);
+
+JPH_BodyCreationSettings_Destroy(floorSettings);
+```
+
+## Body Activation
+
+```c
+typedef enum JPH_Activation {
+    JPH_Activation_Activate = 0,      // Add to simulation immediately
+    JPH_Activation_DontActivate = 1,  // Add but keep inactive
+} JPH_Activation;
+```
+
+<Note>
+  Inactive bodies don't participate in collision detection until activated. Use `DontActivate` for static bodies or when batch-creating bodies.
+</Note>
+
+## Body Creation Settings Properties
+
+### Position and Rotation
+
+```c
+JPH_Vec3 position = { 5.0f, 10.0f, -3.0f };
+JPH_BodyCreationSettings_SetPosition(settings, &position);
+
+JPH_Quat rotation;  // Create rotation from axis-angle
+JPH_Vec3 axis = { 0.0f, 1.0f, 0.0f };
+float angle = JPH_M_PI / 4.0f;  // 45 degrees
+JPH_Quat_FromTo(&axis, &axis, &rotation);
+JPH_BodyCreationSettings_SetRotation(settings, &rotation);
+```
+
+### Velocity
+
+```c
+// Set initial linear velocity
+JPH_Vec3 linearVel = { 5.0f, 0.0f, 0.0f };
+JPH_BodyCreationSettings_SetLinearVelocity(settings, &linearVel);
+
+// Set initial angular velocity
+JPH_Vec3 angularVel = { 0.0f, 2.0f, 0.0f };
+JPH_BodyCreationSettings_SetAngularVelocity(settings, &angularVel);
+```
+
+### Physical Properties
+
+```c
+// Friction (0 = frictionless, 1 = high friction)
+JPH_BodyCreationSettings_SetFriction(settings, 0.5f);
+
+// Restitution/Bounciness (0 = no bounce, 1 = perfect bounce)
+JPH_BodyCreationSettings_SetRestitution(settings, 0.3f);
+
+// Linear damping (air resistance)
+JPH_BodyCreationSettings_SetLinearDamping(settings, 0.05f);
+
+// Angular damping (rotational air resistance)
+JPH_BodyCreationSettings_SetAngularDamping(settings, 0.05f);
+
+// Gravity factor (1 = normal, 0 = no gravity, 2 = double gravity)
+JPH_BodyCreationSettings_SetGravityFactor(settings, 1.0f);
+```
+
+### Motion Quality
+
+```c
+typedef enum JPH_MotionQuality {
+    JPH_MotionQuality_Discrete = 0,     // Faster, may tunnel through thin objects
+    JPH_MotionQuality_LinearCast = 1,   // Slower, prevents tunneling
+} JPH_MotionQuality;
+
+JPH_BodyCreationSettings_SetMotionQuality(settings, JPH_MotionQuality_LinearCast);
+```
+
+<Warning>
+  Use `LinearCast` for fast-moving objects like bullets to prevent tunneling. It's more expensive but prevents objects from passing through walls.
+</Warning>
+
+### Allowed Degrees of Freedom
+
+```c
+typedef enum JPH_AllowedDOFs {
+    JPH_AllowedDOFs_All = 0b111111,
+    JPH_AllowedDOFs_TranslationX = 0b000001,
+    JPH_AllowedDOFs_TranslationY = 0b000010,
+    JPH_AllowedDOFs_TranslationZ = 0b000100,
+    JPH_AllowedDOFs_RotationX = 0b001000,
+    JPH_AllowedDOFs_RotationY = 0b010000,
+    JPH_AllowedDOFs_RotationZ = 0b100000,
+    JPH_AllowedDOFs_Plane2D = JPH_AllowedDOFs_TranslationX | 
+                              JPH_AllowedDOFs_TranslationY | 
+                              JPH_AllowedDOFs_RotationZ,
+} JPH_AllowedDOFs;
+
+// Lock rotation (useful for characters)
+JPH_BodyCreationSettings_SetAllowedDOFs(
+    settings, 
+    JPH_AllowedDOFs_TranslationX | 
+    JPH_AllowedDOFs_TranslationY | 
+    JPH_AllowedDOFs_TranslationZ
+);
+
+// 2D physics (XY plane)
+JPH_BodyCreationSettings_SetAllowedDOFs(settings, JPH_AllowedDOFs_Plane2D);
+```
+
+### Sensors
+
+```c
+// Create a trigger volume (doesn't affect physics but detects overlaps)
+JPH_BodyCreationSettings_SetIsSensor(settings, true);
+```
+
+<Info>
+  Sensors generate collision events but don't apply forces. Perfect for trigger zones, pickup detection, etc.
+</Info>
+
+## Manipulating Bodies
+
+### Position and Rotation
+
+```c
+// Get position
+JPH_RVec3 position;
+JPH_BodyInterface_GetPosition(bodyInterface, bodyID, &position);
+
+// Set position (wakes up body)
+JPH_RVec3 newPosition = { 10.0f, 5.0f, 0.0f };
+JPH_BodyInterface_SetPosition(
+    bodyInterface, 
+    bodyID, 
+    &newPosition, 
+    JPH_Activation_Activate
+);
+
+// Get rotation
+JPH_Quat rotation;
+JPH_BodyInterface_GetRotation(bodyInterface, bodyID, &rotation);
+
+// Set both together (more efficient)
+JPH_BodyInterface_SetPositionAndRotation(
+    bodyInterface,
+    bodyID,
+    &newPosition,
+    &rotation,
+    JPH_Activation_Activate
+);
+```
+
+### Velocity
+
+```c
+// Get linear velocity
+JPH_Vec3 velocity;
+JPH_BodyInterface_GetLinearVelocity(bodyInterface, bodyID, &velocity);
+
+// Set linear velocity
+JPH_Vec3 newVelocity = { 0.0f, 10.0f, 0.0f };
+JPH_BodyInterface_SetLinearVelocity(bodyInterface, bodyID, &newVelocity);
+
+// Add to existing velocity
+JPH_Vec3 velocityDelta = { 5.0f, 0.0f, 0.0f };
+JPH_BodyInterface_AddLinearVelocity(bodyInterface, bodyID, &velocityDelta);
+
+// Angular velocity
+JPH_Vec3 angularVelocity = { 0.0f, 3.14f, 0.0f };
+JPH_BodyInterface_SetAngularVelocity(bodyInterface, bodyID, &angularVelocity);
+```
+
+### Forces and Impulses
+
+```c
+// Apply force (accumulated until next physics step)
+JPH_Vec3 force = { 0.0f, 100.0f, 0.0f };
+JPH_BodyInterface_AddForce(bodyInterface, bodyID, &force);
+
+// Apply force at a point (creates torque)
+JPH_RVec3 point = { 1.0f, 0.0f, 0.0f };
+JPH_BodyInterface_AddForce2(bodyInterface, bodyID, &force, &point);
+
+// Apply torque
+JPH_Vec3 torque = { 0.0f, 10.0f, 0.0f };
+JPH_BodyInterface_AddTorque(bodyInterface, bodyID, &torque);
+
+// Apply impulse (instantaneous velocity change)
+JPH_Vec3 impulse = { 0.0f, 5.0f, 0.0f };
+JPH_BodyInterface_AddImpulse(bodyInterface, bodyID, &impulse);
+
+// Apply impulse at point
+JPH_BodyInterface_AddImpulse2(bodyInterface, bodyID, &impulse, &point);
+```
+
+<Note>
+  Forces accumulate over the frame and are integrated during the physics step. Impulses cause immediate velocity changes.
+</Note>
+
+## Kinematic Bodies
+
+Move kinematic bodies with `MoveKinematic` for proper collision detection:
+
+```c
+JPH_RVec3 targetPosition = { 5.0f, 0.0f, 0.0f };
+JPH_Quat targetRotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+float deltaTime = 1.0f / 60.0f;
+
+JPH_BodyInterface_MoveKinematic(
+    bodyInterface,
+    bodyID,
+    &targetPosition,
+    &targetRotation,
+    deltaTime
+);
+```
+
+## Body State Queries
+
+```c
+// Check if body is active (being simulated)
+bool isActive = JPH_BodyInterface_IsActive(bodyInterface, bodyID);
+
+// Activate/deactivate body
+JPH_BodyInterface_ActivateBody(bodyInterface, bodyID);
+JPH_BodyInterface_DeactivateBody(bodyInterface, bodyID);
+
+// Get motion type
+JPH_MotionType motionType = JPH_BodyInterface_GetMotionType(bodyInterface, bodyID);
+
+// Change motion type (e.g., make dynamic object static)
+JPH_BodyInterface_SetMotionType(
+    bodyInterface,
+    bodyID,
+    JPH_MotionType_Static,
+    JPH_Activation_DontActivate
+);
+
+// Get body type
+JPH_BodyType bodyType = JPH_BodyInterface_GetBodyType(bodyInterface, bodyID);
+```
+
+## Collision Properties
+
+```c
+// Change friction
+JPH_BodyInterface_SetFriction(bodyInterface, bodyID, 0.8f);
+float friction = JPH_BodyInterface_GetFriction(bodyInterface, bodyID);
+
+// Change restitution
+JPH_BodyInterface_SetRestitution(bodyInterface, bodyID, 0.5f);
+float restitution = JPH_BodyInterface_GetRestitution(bodyInterface, bodyID);
+
+// Set as sensor
+JPH_BodyInterface_SetIsSensor(bodyInterface, bodyID, true);
+bool isSensor = JPH_BodyInterface_IsSensor(bodyInterface, bodyID);
+```
+
+## Mass Properties Override
+
+```c
+typedef enum JPH_OverrideMassProperties {
+    JPH_OverrideMassProperties_CalculateMassAndInertia,    // Auto-calculate from shape
+    JPH_OverrideMassProperties_CalculateInertia,           // Use custom mass
+    JPH_OverrideMassProperties_MassAndInertiaProvided,     // Fully custom
+} JPH_OverrideMassProperties;
+
+// Set custom mass
+JPH_BodyCreationSettings_SetOverrideMassProperties(
+    settings, 
+    JPH_OverrideMassProperties_CalculateInertia
+);
+
+JPH_MassProperties massProps = {
+    .mass = 10.0f,
+    // inertia calculated automatically
+};
+JPH_BodyCreationSettings_SetMassPropertiesOverride(settings, &massProps);
+```
+
+## User Data
+
+Attach custom data to bodies:
+
+```c
+// Set user data (can be a pointer to your game object)
+uint64_t userData = (uint64_t)myGameObject;
+JPH_BodyInterface_SetUserData(bodyInterface, bodyID, userData);
+
+// Retrieve user data
+uint64_t retrieved = JPH_BodyInterface_GetUserData(bodyInterface, bodyID);
+MyGameObject* obj = (MyGameObject*)retrieved;
+```
+
+## Removing Bodies
+
+```c
+// Remove from simulation
+JPH_BodyInterface_RemoveBody(bodyInterface, bodyID);
+
+// Destroy body ID
+JPH_BodyInterface_DestroyBody(bodyInterface, bodyID);
+
+// Or do both at once
+JPH_BodyInterface_RemoveAndDestroyBody(bodyInterface, bodyID);
+```
+
+## Complete Example
+
+```c
+#include "joltc.h"
+
+void CreateDynamicBox(JPH_BodyInterface* bodyInterface) {
+    // Create box shape
+    JPH_Vec3 halfExtent = { 0.5f, 0.5f, 0.5f };
+    JPH_BoxShape* boxShape = JPH_BoxShape_Create(
+        &halfExtent, 
+        JPH_DEFAULT_CONVEX_RADIUS
+    );
+    
+    // Position above ground
+    JPH_Vec3 position = { 0.0f, 10.0f, 0.0f };
+    
+    // Create settings
+    JPH_BodyCreationSettings* settings = JPH_BodyCreationSettings_Create3(
+        (const JPH_Shape*)boxShape,
+        &position,
+        NULL,  // Identity rotation
+        JPH_MotionType_Dynamic,
+        Layers::MOVING
+    );
+    
+    // Configure physical properties
+    JPH_BodyCreationSettings_SetFriction(settings, 0.5f);
+    JPH_BodyCreationSettings_SetRestitution(settings, 0.3f);
+    JPH_BodyCreationSettings_SetLinearDamping(settings, 0.05f);
+    JPH_BodyCreationSettings_SetAngularDamping(settings, 0.05f);
+    
+    // Prevent tunneling for fast objects
+    JPH_BodyCreationSettings_SetMotionQuality(
+        settings, 
+        JPH_MotionQuality_LinearCast
+    );
+    
+    // Create and add body
+    JPH_BodyID bodyID = JPH_BodyInterface_CreateAndAddBody(
+        bodyInterface,
+        settings,
+        JPH_Activation_Activate
+    );
+    
+    // Give it an initial velocity
+    JPH_Vec3 velocity = { 0.0f, -5.0f, 0.0f };
+    JPH_BodyInterface_SetLinearVelocity(bodyInterface, bodyID, &velocity);
+    
+    // Cleanup
+    JPH_BodyCreationSettings_Destroy(settings);
+}
+```
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Physics System" icon="gears" href="/core/physics-system">
+    Learn about the physics simulation system
+  </Card>
+  <Card title="Shapes" icon="shapes" href="/core/shapes">
+    Explore collision shape types
+  </Card>
+  <Card title="Collision Detection" icon="intersection" href="/core/collision-detection">
+    Understand collision filtering and detection
+  </Card>
+</CardGroup>

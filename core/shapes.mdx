@@ -1,0 +1,504 @@
+---
+title: 'Shapes'
+description: 'Overview of collision shapes in JoltC'
+---
+
+Shapes define the collision geometry of bodies. JoltPhysics provides a wide variety of shape types optimized for different use cases.
+
+## Shape Types
+
+All shapes inherit from the base `JPH_Shape` type:
+
+```c
+typedef enum JPH_ShapeType {
+    JPH_ShapeType_Convex = 0,       // Convex shapes (sphere, box, etc.)
+    JPH_ShapeType_Compound = 1,     // Combination of shapes
+    JPH_ShapeType_Decorated = 2,    // Wrapper shapes (scaled, rotated)
+    JPH_ShapeType_Mesh = 3,         // Triangle mesh (static only)
+    JPH_ShapeType_HeightField = 4,  // Terrain heightfield
+    JPH_ShapeType_SoftBody = 5,     // Deformable bodies
+} JPH_ShapeType;
+```
+
+### Shape Subtypes
+
+```c
+typedef enum JPH_ShapeSubType {
+    JPH_ShapeSubType_Sphere = 0,
+    JPH_ShapeSubType_Box = 1,
+    JPH_ShapeSubType_Triangle = 2,
+    JPH_ShapeSubType_Capsule = 3,
+    JPH_ShapeSubType_TaperedCapsule = 4,
+    JPH_ShapeSubType_Cylinder = 5,
+    JPH_ShapeSubType_ConvexHull = 6,
+    JPH_ShapeSubType_StaticCompound = 7,
+    JPH_ShapeSubType_MutableCompound = 8,
+    JPH_ShapeSubType_RotatedTranslated = 9,
+    JPH_ShapeSubType_Scaled = 10,
+    JPH_ShapeSubType_OffsetCenterOfMass = 11,
+    JPH_ShapeSubType_Mesh = 12,
+    JPH_ShapeSubType_HeightField = 13,
+    JPH_ShapeSubType_SoftBody = 14,
+} JPH_ShapeSubType;
+```
+
+## Convex Shapes
+
+Convex shapes are the fastest and most versatile collision primitives.
+
+### Sphere
+
+Perfect for balls, particles, and simple collision detection.
+
+```c
+// Create a sphere with radius 0.5
+JPH_SphereShape* sphere = JPH_SphereShape_Create(0.5f);
+
+// Query properties
+float radius = JPH_SphereShape_GetRadius(sphere);
+```
+
+<Tip>
+  Spheres are the fastest shape for collision detection. Use them whenever possible.
+</Tip>
+
+### Box
+
+Rectangular prisms defined by half-extents.
+
+```c
+// Create a 2x2x2 box (half-extents = 1,1,1)
+JPH_Vec3 halfExtent = { 1.0f, 1.0f, 1.0f };
+JPH_BoxShape* box = JPH_BoxShape_Create(
+    &halfExtent, 
+    JPH_DEFAULT_CONVEX_RADIUS
+);
+
+// Query properties
+JPH_Vec3 extents;
+JPH_BoxShape_GetHalfExtent(box, &extents);
+float convexRadius = JPH_BoxShape_GetConvexRadius(box);
+```
+
+<Note>
+  The convex radius slightly rounds the edges. Use `JPH_DEFAULT_CONVEX_RADIUS` (0.05) for most cases.
+</Note>
+
+### Capsule
+
+Cylinder with hemispherical ends. Excellent for characters.
+
+```c
+// Create capsule: halfHeight = cylinder height/2, radius = cap radius
+JPH_CapsuleShape* capsule = JPH_CapsuleShape_Create(
+    0.5f,  // halfHeightOfCylinder
+    0.3f   // radius
+);
+
+float radius = JPH_CapsuleShape_GetRadius(capsule);
+float halfHeight = JPH_CapsuleShape_GetHalfHeightOfCylinder(capsule);
+```
+
+<Info>
+  Total capsule height = `2 * (halfHeightOfCylinder + radius)`
+</Info>
+
+### Cylinder
+
+Standard cylinder shape.
+
+```c
+JPH_CylinderShape* cylinder = JPH_CylinderShape_Create(
+    1.0f,  // halfHeight
+    0.5f   // radius
+);
+
+float radius = JPH_CylinderShape_GetRadius(cylinder);
+float halfHeight = JPH_CylinderShape_GetHalfHeight(cylinder);
+```
+
+### Tapered Capsule
+
+Capsule with different radii at top and bottom.
+
+```c
+JPH_TaperedCapsuleShape* taperedCapsule = JPH_TaperedCapsuleShape_Create(
+    0.5f,  // halfHeightOfTaperedCylinder
+    0.3f,  // topRadius
+    0.5f   // bottomRadius
+);
+
+float topRadius = JPH_TaperedCapsuleShape_GetTopRadius(taperedCapsule);
+float bottomRadius = JPH_TaperedCapsuleShape_GetBottomRadius(taperedCapsule);
+```
+
+### Tapered Cylinder
+
+Cylinder with different radii at top and bottom.
+
+```c
+JPH_TaperedCylinderShapeSettings* settings = 
+    JPH_TaperedCylinderShapeSettings_Create(
+        0.5f,                      // halfHeightOfTaperedCylinder
+        0.3f,                      // topRadius
+        0.5f,                      // bottomRadius
+        JPH_DEFAULT_CONVEX_RADIUS,
+        NULL                       // material
+    );
+
+JPH_TaperedCylinderShape* taperedCylinder = 
+    JPH_TaperedCylinderShapeSettings_CreateShape(settings);
+```
+
+### Convex Hull
+
+Convex hull from arbitrary point cloud.
+
+```c
+// Define vertices
+JPH_Vec3 points[] = {
+    { -1.0f, 0.0f, -1.0f },
+    {  1.0f, 0.0f, -1.0f },
+    {  0.0f, 2.0f,  0.0f },
+    { -1.0f, 0.0f,  1.0f },
+    {  1.0f, 0.0f,  1.0f }
+};
+
+JPH_ConvexHullShapeSettings* settings = 
+    JPH_ConvexHullShapeSettings_Create(
+        points,
+        sizeof(points) / sizeof(points[0]),
+        JPH_DEFAULT_CONVEX_RADIUS
+    );
+
+JPH_ConvexHullShape* hull = 
+    JPH_ConvexHullShapeSettings_CreateShape(settings);
+
+// Query hull properties
+uint32_t numPoints = JPH_ConvexHullShape_GetNumPoints(hull);
+uint32_t numFaces = JPH_ConvexHullShape_GetNumFaces(hull);
+```
+
+<Warning>
+  Convex hulls are slower than primitives. Keep vertex count low (< 256 vertices recommended).
+</Warning>
+
+### Triangle
+
+Single triangle (useful in compound shapes).
+
+```c
+JPH_Vec3 v1 = { 0.0f, 0.0f, 0.0f };
+JPH_Vec3 v2 = { 1.0f, 0.0f, 0.0f };
+JPH_Vec3 v3 = { 0.0f, 1.0f, 0.0f };
+
+JPH_TriangleShape* triangle = JPH_TriangleShape_Create(
+    &v1, &v2, &v3,
+    JPH_DEFAULT_CONVEX_RADIUS
+);
+```
+
+### Plane
+
+Infinite plane (static only).
+
+```c
+JPH_Plane plane = {
+    .normal = { 0.0f, 1.0f, 0.0f },
+    .distance = 0.0f
+};
+
+JPH_PlaneShape* planeShape = JPH_PlaneShape_Create(
+    &plane,
+    NULL,   // material
+    100.0f  // halfExtent (for visualization)
+);
+```
+
+## Compound Shapes
+
+Combine multiple shapes into one complex shape.
+
+### Static Compound
+
+Optimized for shapes that never change.
+
+```c
+JPH_StaticCompoundShapeSettings* compoundSettings = 
+    JPH_StaticCompoundShapeSettings_Create();
+
+// Add a box
+JPH_Vec3 boxHalfExtent = { 0.5f, 0.5f, 0.5f };
+JPH_BoxShape* box = JPH_BoxShape_Create(&boxHalfExtent, JPH_DEFAULT_CONVEX_RADIUS);
+JPH_Vec3 boxPos = { 0.0f, 0.5f, 0.0f };
+JPH_Quat boxRot = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+JPH_CompoundShapeSettings_AddShape2(
+    (JPH_CompoundShapeSettings*)compoundSettings,
+    &boxPos,
+    &boxRot,
+    (const JPH_Shape*)box,
+    0  // userData
+);
+
+// Add a sphere
+JPH_SphereShape* sphere = JPH_SphereShape_Create(0.3f);
+JPH_Vec3 spherePos = { 0.0f, -0.5f, 0.0f };
+
+JPH_CompoundShapeSettings_AddShape2(
+    (JPH_CompoundShapeSettings*)compoundSettings,
+    &spherePos,
+    &boxRot,
+    (const JPH_Shape*)sphere,
+    0
+);
+
+JPH_StaticCompoundShape* compound = 
+    JPH_StaticCompoundShape_Create(compoundSettings);
+```
+
+### Mutable Compound
+
+Allows runtime modifications.
+
+```c
+JPH_MutableCompoundShapeSettings* mutableSettings = 
+    JPH_MutableCompoundShapeSettings_Create();
+
+JPH_MutableCompoundShape* mutableCompound = 
+    JPH_MutableCompoundShape_Create(mutableSettings);
+
+// Add shape at runtime
+JPH_SphereShape* sphere = JPH_SphereShape_Create(0.5f);
+JPH_Vec3 position = { 0.0f, 0.0f, 0.0f };
+JPH_Quat rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+uint32_t index = JPH_MutableCompoundShape_AddShape(
+    mutableCompound,
+    &position,
+    &rotation,
+    (const JPH_Shape*)sphere,
+    0  // userData
+);
+
+// Modify shape position
+JPH_Vec3 newPosition = { 1.0f, 0.0f, 0.0f };
+JPH_MutableCompoundShape_ModifyShape(
+    mutableCompound,
+    index,
+    &newPosition,
+    &rotation
+);
+
+// Remove shape
+JPH_MutableCompoundShape_RemoveShape(mutableCompound, index);
+```
+
+<Warning>
+  Modifying a mutable compound shape invalidates the body's collision cache. Call `JPH_BodyInterface_NotifyShapeChanged()` after modifications.
+</Warning>
+
+## Mesh Shapes
+
+### Triangle Mesh
+
+Complex static geometry (terrain, buildings). **Static bodies only.**
+
+```c
+// Define vertices
+JPH_Vec3 vertices[] = {
+    { 0.0f, 0.0f, 0.0f },
+    { 1.0f, 0.0f, 0.0f },
+    { 1.0f, 0.0f, 1.0f },
+    { 0.0f, 0.0f, 1.0f },
+    { 0.5f, 1.0f, 0.5f }
+};
+
+// Define triangles (indices into vertex array)
+JPH_IndexedTriangle triangles[] = {
+    { .i1 = 0, .i2 = 1, .i3 = 4, .materialIndex = 0, .userData = 0 },
+    { .i1 = 1, .i2 = 2, .i3 = 4, .materialIndex = 0, .userData = 0 },
+    { .i1 = 2, .i2 = 3, .i3 = 4, .materialIndex = 0, .userData = 0 },
+    { .i1 = 3, .i2 = 0, .i3 = 4, .materialIndex = 0, .userData = 0 },
+    { .i1 = 0, .i2 = 2, .i3 = 1, .materialIndex = 0, .userData = 0 },
+    { .i1 = 0, .i2 = 3, .i3 = 2, .materialIndex = 0, .userData = 0 }
+};
+
+JPH_MeshShapeSettings* meshSettings = JPH_MeshShapeSettings_Create2(
+    vertices,
+    sizeof(vertices) / sizeof(vertices[0]),
+    triangles,
+    sizeof(triangles) / sizeof(triangles[0])
+);
+
+// Optimize for runtime performance
+JPH_MeshShapeSettings_SetBuildQuality(
+    meshSettings, 
+    JPH_Mesh_Shape_BuildQuality_FavorRuntimePerformance
+);
+
+JPH_MeshShape* mesh = JPH_MeshShapeSettings_CreateShape(meshSettings);
+```
+
+<Info>
+  Mesh shapes cannot be used with dynamic bodies. Use convex decomposition or compound shapes instead.
+</Info>
+
+### Height Field
+
+Optimized terrain representation.
+
+```c
+// Create 33x33 heightfield
+const uint32_t sampleCount = 33;
+float samples[sampleCount * sampleCount];
+
+// Generate terrain heights
+for (uint32_t y = 0; y < sampleCount; ++y) {
+    for (uint32_t x = 0; x < sampleCount; ++x) {
+        samples[y * sampleCount + x] = sinf(x * 0.5f) * cosf(y * 0.5f);
+    }
+}
+
+JPH_Vec3 offset = { 0.0f, 0.0f, 0.0f };
+JPH_Vec3 scale = { 1.0f, 1.0f, 1.0f };
+
+JPH_HeightFieldShapeSettings* heightFieldSettings = 
+    JPH_HeightFieldShapeSettings_Create(
+        samples,
+        &offset,
+        &scale,
+        sampleCount,
+        NULL  // materialIndices
+    );
+
+JPH_HeightFieldShape* heightField = 
+    JPH_HeightFieldShapeSettings_CreateShape(heightFieldSettings);
+```
+
+## Decorated Shapes
+
+Wrapper shapes that transform or modify other shapes.
+
+### Rotated/Translated Shape
+
+Apply rotation and translation to any shape.
+
+```c
+JPH_BoxShape* box = JPH_BoxShape_Create(&(JPH_Vec3){1.0f, 0.5f, 1.0f}, 0.0f);
+
+JPH_Vec3 position = { 0.0f, 1.0f, 0.0f };
+JPH_Quat rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+JPH_RotatedTranslatedShape* rotatedShape = 
+    JPH_RotatedTranslatedShape_Create(
+        &position,
+        &rotation,
+        (const JPH_Shape*)box
+    );
+```
+
+### Scaled Shape
+
+Non-uniformly scale any shape.
+
+```c
+JPH_SphereShape* sphere = JPH_SphereShape_Create(1.0f);
+JPH_Vec3 scale = { 1.0f, 2.0f, 1.0f };  // Ellipsoid
+
+JPH_ScaledShape* scaledShape = JPH_ScaledShape_Create(
+    (const JPH_Shape*)sphere,
+    &scale
+);
+```
+
+<Note>
+  Not all shapes support all scale factors. Use `JPH_Shape_IsValidScale()` to check.
+</Note>
+
+### Offset Center of Mass
+
+Offset the center of mass without changing collision geometry.
+
+```c
+JPH_BoxShape* box = JPH_BoxShape_Create(&(JPH_Vec3){1.0f, 1.0f, 1.0f}, 0.0f);
+JPH_Vec3 offset = { 0.0f, -0.5f, 0.0f };  // Move COM down
+
+JPH_OffsetCenterOfMassShape* offsetShape = 
+    JPH_OffsetCenterOfMassShape_Create(
+        &offset,
+        (const JPH_Shape*)box
+    );
+```
+
+## Shape Selection Guide
+
+| Use Case | Recommended Shape |
+|----------|-------------------|
+| Ball, projectile | Sphere |
+| Box, crate | Box |
+| Character | Capsule |
+| Wheel | Cylinder |
+| Complex convex object | Convex Hull |
+| Vehicle chassis | Static Compound |
+| Breakable object | Mutable Compound |
+| Static level geometry | Mesh or Height Field |
+| Terrain | Height Field |
+
+## Shape Properties
+
+### User Data
+
+```c
+uint64_t userData = 12345;
+JPH_Shape_SetUserData((JPH_Shape*)shape, userData);
+uint64_t retrieved = JPH_Shape_GetUserData((const JPH_Shape*)shape);
+```
+
+### Mass Properties
+
+```c
+JPH_MassProperties massProps;
+JPH_Shape_GetMassProperties((const JPH_Shape*)shape, &massProps);
+
+printf("Mass: %f\n", massProps.mass);
+```
+
+### Bounding Box
+
+```c
+JPH_AABox bounds;
+JPH_Shape_GetLocalBounds((const JPH_Shape*)shape, &bounds);
+
+printf("Min: (%f, %f, %f)\n", bounds.min.x, bounds.min.y, bounds.min.z);
+printf("Max: (%f, %f, %f)\n", bounds.max.x, bounds.max.y, bounds.max.z);
+```
+
+## Performance Tips
+
+<Tip>
+  1. **Use primitives when possible**: Sphere > Capsule > Box > Cylinder > Convex Hull
+  2. **Limit compound shapes**: Keep sub-shape count < 32
+  3. **Simplify meshes**: Fewer triangles = faster collision
+  4. **Use height fields for terrain**: Much faster than mesh shapes
+  5. **Avoid very small shapes**: Minimum recommended size is 0.1 units
+</Tip>
+
+## Cleanup
+
+Shapes are reference counted. Destroy when no longer needed:
+
+```c
+JPH_Shape_Destroy((JPH_Shape*)shape);
+```
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Bodies" icon="cube" href="/core/bodies">
+    Learn how to create bodies with shapes
+  </Card>
+  <Card title="Collision Detection" icon="intersection" href="/core/collision-detection">
+    Understand how shapes interact
+  </Card>
+</CardGroup>

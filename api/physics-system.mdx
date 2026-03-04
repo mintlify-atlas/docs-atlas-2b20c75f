@@ -1,0 +1,464 @@
+---
+title: Physics System
+description: Core physics simulation system for JoltC
+---
+
+## Overview
+
+The Physics System is the main simulation engine in JoltC. It manages bodies, constraints, collision detection, and simulation stepping.
+
+## Structures
+
+### JPH_PhysicsSystemSettings
+
+Configuration settings for creating a physics system.
+
+```c
+typedef struct JPH_PhysicsSystemSettings {
+    uint32_t maxBodies;
+    uint32_t numBodyMutexes;
+    uint32_t maxBodyPairs;
+    uint32_t maxContactConstraints;
+    uint32_t _padding;
+    JPH_BroadPhaseLayerInterface* broadPhaseLayerInterface;
+    JPH_ObjectLayerPairFilter* objectLayerPairFilter;
+    JPH_ObjectVsBroadPhaseLayerFilter* objectVsBroadPhaseLayerFilter;
+} JPH_PhysicsSystemSettings;
+```
+
+<ParamField path="maxBodies" type="uint32_t">
+  Maximum number of bodies that can be added to the system. Default: 10240.
+</ParamField>
+
+<ParamField path="numBodyMutexes" type="uint32_t">
+  Number of mutexes to allocate for body access. Use 0 for auto-calculation. Default: 0.
+</ParamField>
+
+<ParamField path="maxBodyPairs" type="uint32_t">
+  Maximum number of body pairs that can be in contact. Default: 65536.
+</ParamField>
+
+<ParamField path="maxContactConstraints" type="uint32_t">
+  Maximum number of contact constraints. Default: 10240.
+</ParamField>
+
+<ParamField path="broadPhaseLayerInterface" type="JPH_BroadPhaseLayerInterface*">
+  Broad phase layer interface for collision filtering.
+</ParamField>
+
+<ParamField path="objectLayerPairFilter" type="JPH_ObjectLayerPairFilter*">
+  Filter to determine which object layer pairs can collide.
+</ParamField>
+
+<ParamField path="objectVsBroadPhaseLayerFilter" type="JPH_ObjectVsBroadPhaseLayerFilter*">
+  Filter to determine which object layers can collide with broad phase layers.
+</ParamField>
+
+---
+
+### JPH_PhysicsSettings
+
+Runtime physics simulation settings.
+
+```c
+typedef struct JPH_PhysicsSettings {
+    int maxInFlightBodyPairs;
+    int stepListenersBatchSize;
+    int stepListenerBatchesPerJob;
+    float baumgarte;
+    float speculativeContactDistance;
+    float penetrationSlop;
+    float linearCastThreshold;
+    float linearCastMaxPenetration;
+    float manifoldTolerance;
+    float maxPenetrationDistance;
+    float bodyPairCacheMaxDeltaPositionSq;
+    float bodyPairCacheCosMaxDeltaRotationDiv2;
+    float contactNormalCosMaxDeltaRotation;
+    float contactPointPreserveLambdaMaxDistSq;
+    uint32_t numVelocitySteps;
+    uint32_t numPositionSteps;
+    float minVelocityForRestitution;
+    float timeBeforeSleep;
+    float pointVelocitySleepThreshold;
+    bool deterministicSimulation;
+    bool constraintWarmStart;
+    bool useBodyPairContactCache;
+    bool useManifoldReduction;
+    bool useLargeIslandSplitter;
+    bool allowSleeping;
+    bool checkActiveEdges;
+} JPH_PhysicsSettings;
+```
+
+<ParamField path="numVelocitySteps" type="uint32_t">
+  Number of solver velocity iterations per simulation step.
+</ParamField>
+
+<ParamField path="numPositionSteps" type="uint32_t">
+  Number of solver position iterations per simulation step.
+</ParamField>
+
+<ParamField path="baumgarte" type="float">
+  Baumgarte stabilization factor for position correction.
+</ParamField>
+
+<ParamField path="speculativeContactDistance" type="float">
+  Distance threshold for speculative contact generation (in meters).
+</ParamField>
+
+<ParamField path="penetrationSlop" type="float">
+  Allowed penetration before position correction kicks in (in meters).
+</ParamField>
+
+<ParamField path="minVelocityForRestitution" type="float">
+  Minimum velocity for restitution (bounce) to be applied.
+</ParamField>
+
+<ParamField path="timeBeforeSleep" type="float">
+  Time a body must be below sleep thresholds before going to sleep (in seconds).
+</ParamField>
+
+<ParamField path="pointVelocitySleepThreshold" type="float">
+  Velocity threshold below which a body can go to sleep.
+</ParamField>
+
+<ParamField path="deterministicSimulation" type="bool">
+  Enable deterministic simulation (same inputs produce same outputs).
+</ParamField>
+
+<ParamField path="allowSleeping" type="bool">
+  Allow bodies to go to sleep when at rest.
+</ParamField>
+
+<ParamField path="checkActiveEdges" type="bool">
+  Check for active edges during collision detection.
+</ParamField>
+
+## Functions
+
+### JPH_PhysicsSystem_Create
+
+Creates a new physics system.
+
+```c
+JPH_PhysicsSystem* JPH_PhysicsSystem_Create(const JPH_PhysicsSystemSettings* settings);
+```
+
+<ParamField path="settings" type="const JPH_PhysicsSystemSettings*">
+  Configuration settings for the physics system.
+</ParamField>
+
+<ParamField path="return" type="JPH_PhysicsSystem*">
+  Pointer to the newly created physics system, or `NULL` on failure.
+</ParamField>
+
+---
+
+### JPH_PhysicsSystem_Destroy
+
+Destroys a physics system and frees all resources.
+
+```c
+void JPH_PhysicsSystem_Destroy(JPH_PhysicsSystem* system);
+```
+
+<ParamField path="system" type="JPH_PhysicsSystem*">
+  The physics system to destroy.
+</ParamField>
+
+---
+
+### JPH_PhysicsSystem_Update
+
+Steps the physics simulation forward.
+
+```c
+JPH_PhysicsUpdateError JPH_PhysicsSystem_Update(
+    JPH_PhysicsSystem* system,
+    float deltaTime,
+    int collisionSteps,
+    JPH_JobSystem* jobSystem
+);
+```
+
+<ParamField path="system" type="JPH_PhysicsSystem*">
+  The physics system to update.
+</ParamField>
+
+<ParamField path="deltaTime" type="float">
+  Time to simulate in seconds (typically 1/60 for 60 FPS).
+</ParamField>
+
+<ParamField path="collisionSteps" type="int">
+  Number of collision detection steps to perform. More steps improve accuracy.
+</ParamField>
+
+<ParamField path="jobSystem" type="JPH_JobSystem*">
+  Job system for parallel execution of physics tasks.
+</ParamField>
+
+<ParamField path="return" type="JPH_PhysicsUpdateError">
+  Error flags indicating any issues during simulation (0 = no errors).
+</ParamField>
+
+---
+
+### JPH_PhysicsSystem_SetPhysicsSettings
+
+Updates the physics simulation settings.
+
+```c
+void JPH_PhysicsSystem_SetPhysicsSettings(
+    JPH_PhysicsSystem* system,
+    JPH_PhysicsSettings* settings
+);
+```
+
+<ParamField path="system" type="JPH_PhysicsSystem*">
+  The physics system to update.
+</ParamField>
+
+<ParamField path="settings" type="JPH_PhysicsSettings*">
+  New physics settings to apply.
+</ParamField>
+
+---
+
+### JPH_PhysicsSystem_GetPhysicsSettings
+
+Retrieves the current physics simulation settings.
+
+```c
+void JPH_PhysicsSystem_GetPhysicsSettings(
+    JPH_PhysicsSystem* system,
+    JPH_PhysicsSettings* result
+);
+```
+
+<ParamField path="system" type="JPH_PhysicsSystem*">
+  The physics system to query.
+</ParamField>
+
+<ParamField path="result" type="JPH_PhysicsSettings*">
+  Output parameter that receives the current settings.
+</ParamField>
+
+---
+
+### JPH_PhysicsSystem_SetGravity
+
+Sets the global gravity vector.
+
+```c
+void JPH_PhysicsSystem_SetGravity(
+    JPH_PhysicsSystem* system,
+    const JPH_Vec3* value
+);
+```
+
+<ParamField path="system" type="JPH_PhysicsSystem*">
+  The physics system to update.
+</ParamField>
+
+<ParamField path="value" type="const JPH_Vec3*">
+  Gravity vector (typically {0, -9.81, 0} for Earth gravity).
+</ParamField>
+
+---
+
+### JPH_PhysicsSystem_GetGravity
+
+Retrieves the current global gravity vector.
+
+```c
+void JPH_PhysicsSystem_GetGravity(
+    JPH_PhysicsSystem* system,
+    JPH_Vec3* result
+);
+```
+
+<ParamField path="system" type="JPH_PhysicsSystem*">
+  The physics system to query.
+</ParamField>
+
+<ParamField path="result" type="JPH_Vec3*">
+  Output parameter that receives the gravity vector.
+</ParamField>
+
+---
+
+### JPH_PhysicsSystem_GetBodyInterface
+
+Gets the body interface for thread-safe body manipulation.
+
+```c
+JPH_BodyInterface* JPH_PhysicsSystem_GetBodyInterface(JPH_PhysicsSystem* system);
+```
+
+<ParamField path="system" type="JPH_PhysicsSystem*">
+  The physics system.
+</ParamField>
+
+<ParamField path="return" type="JPH_BodyInterface*">
+  Pointer to the thread-safe body interface.
+</ParamField>
+
+---
+
+### JPH_PhysicsSystem_GetBodyInterfaceNoLock
+
+Gets the body interface without locking (use only from simulation callbacks).
+
+```c
+JPH_BodyInterface* JPH_PhysicsSystem_GetBodyInterfaceNoLock(JPH_PhysicsSystem* system);
+```
+
+<ParamField path="system" type="JPH_PhysicsSystem*">
+  The physics system.
+</ParamField>
+
+<ParamField path="return" type="JPH_BodyInterface*">
+  Pointer to the non-locking body interface.
+</ParamField>
+
+<Warning>
+  Only use this from within physics step listeners or other simulation callbacks. Using it from other threads can cause race conditions.
+</Warning>
+
+---
+
+### JPH_PhysicsSystem_GetNumBodies
+
+Gets the total number of bodies in the system.
+
+```c
+uint32_t JPH_PhysicsSystem_GetNumBodies(const JPH_PhysicsSystem* system);
+```
+
+<ParamField path="return" type="uint32_t">
+  Total number of bodies.
+</ParamField>
+
+---
+
+### JPH_PhysicsSystem_GetNumActiveBodies
+
+Gets the number of active (non-sleeping) bodies of a specific type.
+
+```c
+uint32_t JPH_PhysicsSystem_GetNumActiveBodies(
+    const JPH_PhysicsSystem* system,
+    JPH_BodyType type
+);
+```
+
+<ParamField path="type" type="JPH_BodyType">
+  Body type to count (JPH_BodyType_Rigid or JPH_BodyType_Soft).
+</ParamField>
+
+<ParamField path="return" type="uint32_t">
+  Number of active bodies of the specified type.
+</ParamField>
+
+---
+
+### JPH_PhysicsSystem_GetMaxBodies
+
+Gets the maximum number of bodies the system can support.
+
+```c
+uint32_t JPH_PhysicsSystem_GetMaxBodies(const JPH_PhysicsSystem* system);
+```
+
+<ParamField path="return" type="uint32_t">
+  Maximum body count configured at creation.
+</ParamField>
+
+---
+
+### JPH_PhysicsSystem_OptimizeBroadPhase
+
+Optimizes the broad phase collision detection structure.
+
+```c
+void JPH_PhysicsSystem_OptimizeBroadPhase(JPH_PhysicsSystem* system);
+```
+
+<ParamField path="system" type="JPH_PhysicsSystem*">
+  The physics system to optimize.
+</ParamField>
+
+<Note>
+  Call this periodically (e.g., after loading a level) to optimize spatial data structures for better performance.
+</Note>
+
+## Example
+
+```c
+#include <joltc.h>
+#include <stdio.h>
+
+int main() {
+    if (!JPH_Init()) {
+        return 1;
+    }
+    
+    // Set up collision layers (simplified example)
+    JPH_BroadPhaseLayerInterface* bpInterface = 
+        JPH_BroadPhaseLayerInterfaceTable_Create(2, 2);
+    JPH_ObjectLayerPairFilter* layerFilter = 
+        JPH_ObjectLayerPairFilterTable_Create(2);
+    JPH_ObjectVsBroadPhaseLayerFilter* bpFilter = 
+        JPH_ObjectVsBroadPhaseLayerFilterTable_Create(bpInterface, 2, layerFilter, 2);
+    
+    // Create physics system
+    JPH_PhysicsSystemSettings settings = {
+        .maxBodies = 1024,
+        .numBodyMutexes = 0,
+        .maxBodyPairs = 1024,
+        .maxContactConstraints = 1024,
+        .broadPhaseLayerInterface = bpInterface,
+        .objectLayerPairFilter = layerFilter,
+        .objectVsBroadPhaseLayerFilter = bpFilter
+    };
+    
+    JPH_PhysicsSystem* system = JPH_PhysicsSystem_Create(&settings);
+    if (!system) {
+        fprintf(stderr, "Failed to create physics system\n");
+        JPH_Shutdown();
+        return 1;
+    }
+    
+    // Set gravity
+    JPH_Vec3 gravity = { 0.0f, -9.81f, 0.0f };
+    JPH_PhysicsSystem_SetGravity(system, &gravity);
+    
+    // Create job system
+    JobSystemThreadPoolConfig jobConfig = {
+        .maxJobs = 2048,
+        .maxBarriers = 8,
+        .numThreads = -1  // Auto-detect CPU count
+    };
+    JPH_JobSystem* jobSystem = JPH_JobSystemThreadPool_Create(&jobConfig);
+    
+    // Simulation loop
+    const float deltaTime = 1.0f / 60.0f;
+    for (int i = 0; i < 600; i++) {
+        JPH_PhysicsUpdateError error = JPH_PhysicsSystem_Update(
+            system, deltaTime, 1, jobSystem
+        );
+        
+        if (error != JPH_PhysicsUpdateError_None) {
+            fprintf(stderr, "Physics update error: 0x%x\n", error);
+        }
+    }
+    
+    // Clean up
+    JPH_JobSystem_Destroy(jobSystem);
+    JPH_PhysicsSystem_Destroy(system);
+    JPH_Shutdown();
+    
+    return 0;
+}
+```

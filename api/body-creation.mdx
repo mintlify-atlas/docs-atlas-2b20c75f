@@ -1,0 +1,831 @@
+---
+title: Body Creation
+description: Creating and configuring rigid bodies for physics simulation
+---
+
+Body creation in JoltC involves setting up a `JPH_BodyCreationSettings` structure that defines all the properties of a body, then using it to create and add the body to the physics system.
+
+## Body Creation Settings
+
+The `JPH_BodyCreationSettings` structure contains all the configuration for creating a body.
+
+### JPH_BodyCreationSettings_Create
+
+Creates an empty body creation settings object.
+
+**Returns:** `JPH_BodyCreationSettings*` - The created settings object
+
+```c
+JPH_BodyCreationSettings* settings = JPH_BodyCreationSettings_Create();
+// Configure settings...
+JPH_BodyCreationSettings_Destroy(settings);
+```
+
+### JPH_BodyCreationSettings_Create2
+
+Creates body creation settings from a shape settings object.
+
+<ParamField path="settings" type="const JPH_ShapeSettings*">
+  The shape settings to use
+</ParamField>
+
+<ParamField path="position" type="const JPH_RVec3*">
+  The initial position
+</ParamField>
+
+<ParamField path="rotation" type="const JPH_Quat*">
+  The initial rotation
+</ParamField>
+
+<ParamField path="motionType" type="JPH_MotionType">
+  The motion type (Static, Kinematic, or Dynamic)
+</ParamField>
+
+<ParamField path="objectLayer" type="JPH_ObjectLayer">
+  The object layer for collision filtering
+</ParamField>
+
+**Returns:** `JPH_BodyCreationSettings*` - The created settings object
+
+### JPH_BodyCreationSettings_Create3
+
+Creates body creation settings from an already-created shape.
+
+<ParamField path="shape" type="const JPH_Shape*">
+  The shape to use
+</ParamField>
+
+<ParamField path="position" type="const JPH_RVec3*">
+  The initial position
+</ParamField>
+
+<ParamField path="rotation" type="const JPH_Quat*">
+  The initial rotation
+</ParamField>
+
+<ParamField path="motionType" type="JPH_MotionType">
+  The motion type
+</ParamField>
+
+<ParamField path="objectLayer" type="JPH_ObjectLayer">
+  The object layer
+</ParamField>
+
+**Returns:** `JPH_BodyCreationSettings*` - The created settings object
+
+```c
+JPH_Vec3 halfExtent = { 1.0f, 1.0f, 1.0f };
+JPH_BoxShape* boxShape = JPH_BoxShape_Create(&halfExtent, 0.05f);
+
+JPH_RVec3 position = { 0.0f, 10.0f, 0.0f };
+JPH_Quat rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+JPH_BodyCreationSettings* settings = JPH_BodyCreationSettings_Create3(
+    (JPH_Shape*)boxShape,
+    &position,
+    &rotation,
+    JPH_MotionType_Dynamic,
+    LAYER_MOVING
+);
+```
+
+### JPH_BodyCreationSettings_Destroy
+
+Destroys a body creation settings object.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object to destroy
+</ParamField>
+
+## Body ID
+
+`JPH_BodyID` is a 32-bit unsigned integer that uniquely identifies a body in the physics system.
+
+```c
+typedef uint32_t JPH_BodyID;
+```
+
+Body IDs are automatically assigned when you add a body to the physics system. You can use them to reference and manipulate bodies through the `JPH_BodyInterface`.
+
+## Motion Types
+
+The `JPH_MotionType` enum defines how a body moves:
+
+```c
+typedef enum JPH_MotionType {
+    JPH_MotionType_Static = 0,      // Immovable (infinite mass)
+    JPH_MotionType_Kinematic = 1,   // Movable via velocity (infinite mass)
+    JPH_MotionType_Dynamic = 2,     // Fully simulated (finite mass)
+} JPH_MotionType;
+```
+
+- **Static**: Bodies that never move (walls, floors, terrain)
+- **Kinematic**: Bodies moved by user code (moving platforms, doors)
+- **Dynamic**: Bodies affected by forces and collisions (physics objects)
+
+## Position and Rotation
+
+### JPH_BodyCreationSettings_GetPosition
+
+Gets the initial position from settings.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="result" type="JPH_RVec3*">
+  Output parameter for the position
+</ParamField>
+
+### JPH_BodyCreationSettings_SetPosition
+
+Sets the initial position.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="const JPH_RVec3*">
+  The position to set
+</ParamField>
+
+### JPH_BodyCreationSettings_GetRotation
+
+Gets the initial rotation from settings.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="result" type="JPH_Quat*">
+  Output parameter for the rotation
+</ParamField>
+
+### JPH_BodyCreationSettings_SetRotation
+
+Sets the initial rotation.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="const JPH_Quat*">
+  The rotation quaternion to set
+</ParamField>
+
+## Velocity
+
+### JPH_BodyCreationSettings_GetLinearVelocity
+
+Gets the initial linear velocity.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="velocity" type="JPH_Vec3*">
+  Output parameter for the velocity
+</ParamField>
+
+### JPH_BodyCreationSettings_SetLinearVelocity
+
+Sets the initial linear velocity.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="velocity" type="const JPH_Vec3*">
+  The velocity to set
+</ParamField>
+
+### JPH_BodyCreationSettings_GetAngularVelocity
+
+Gets the initial angular velocity.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="velocity" type="JPH_Vec3*">
+  Output parameter for the angular velocity
+</ParamField>
+
+### JPH_BodyCreationSettings_SetAngularVelocity
+
+Sets the initial angular velocity.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="velocity" type="const JPH_Vec3*">
+  The angular velocity to set
+</ParamField>
+
+## Motion Properties
+
+### JPH_BodyCreationSettings_GetMotionType
+
+Gets the motion type.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `JPH_MotionType` - The motion type
+
+### JPH_BodyCreationSettings_SetMotionType
+
+Sets the motion type.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="JPH_MotionType">
+  The motion type to set
+</ParamField>
+
+### JPH_BodyCreationSettings_GetMotionQuality
+
+Gets the motion quality.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `JPH_MotionQuality` - The motion quality
+
+### JPH_BodyCreationSettings_SetMotionQuality
+
+Sets the motion quality.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="JPH_MotionQuality">
+  The motion quality (Discrete or LinearCast)
+</ParamField>
+
+## Physical Properties
+
+### JPH_BodyCreationSettings_GetFriction
+
+Gets the friction coefficient.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `float` - The friction coefficient
+
+### JPH_BodyCreationSettings_SetFriction
+
+Sets the friction coefficient.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="float">
+  The friction coefficient (typically 0.0 to 1.0)
+</ParamField>
+
+### JPH_BodyCreationSettings_GetRestitution
+
+Gets the restitution (bounciness).
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `float` - The restitution coefficient
+
+### JPH_BodyCreationSettings_SetRestitution
+
+Sets the restitution (bounciness).
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="float">
+  The restitution coefficient (0.0 = no bounce, 1.0 = perfect bounce)
+</ParamField>
+
+### JPH_BodyCreationSettings_GetLinearDamping
+
+Gets the linear damping.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `float` - The linear damping coefficient
+
+### JPH_BodyCreationSettings_SetLinearDamping
+
+Sets the linear damping.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="float">
+  The linear damping coefficient
+</ParamField>
+
+### JPH_BodyCreationSettings_GetAngularDamping
+
+Gets the angular damping.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `float` - The angular damping coefficient
+
+### JPH_BodyCreationSettings_SetAngularDamping
+
+Sets the angular damping.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="float">
+  The angular damping coefficient
+</ParamField>
+
+### JPH_BodyCreationSettings_GetGravityFactor
+
+Gets the gravity factor.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `float` - The gravity factor
+
+### JPH_BodyCreationSettings_SetGravityFactor
+
+Sets the gravity factor.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="float">
+  The gravity factor (1.0 = normal gravity, 0.0 = no gravity)
+</ParamField>
+
+## Collision Settings
+
+### JPH_BodyCreationSettings_GetObjectLayer
+
+Gets the object layer.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `JPH_ObjectLayer` - The object layer
+
+### JPH_BodyCreationSettings_SetObjectLayer
+
+Sets the object layer.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="JPH_ObjectLayer">
+  The object layer for collision filtering
+</ParamField>
+
+### JPH_BodyCreationSettings_GetCollisionGroup
+
+Gets the collision group.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="result" type="JPH_CollisionGroup*">
+  Output parameter for the collision group
+</ParamField>
+
+### JPH_BodyCreationSettings_SetCollisionGroup
+
+Sets the collision group.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="const JPH_CollisionGroup*">
+  The collision group
+</ParamField>
+
+### JPH_BodyCreationSettings_GetIsSensor
+
+Gets whether the body is a sensor.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `bool` - True if the body is a sensor
+
+### JPH_BodyCreationSettings_SetIsSensor
+
+Sets whether the body is a sensor.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="bool">
+  True to make the body a sensor (triggers collisions without physical response)
+</ParamField>
+
+## Advanced Settings
+
+### JPH_BodyCreationSettings_GetAllowedDOFs
+
+Gets the allowed degrees of freedom.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `JPH_AllowedDOFs` - The allowed degrees of freedom
+
+### JPH_BodyCreationSettings_SetAllowedDOFs
+
+Sets the allowed degrees of freedom.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="JPH_AllowedDOFs">
+  The allowed degrees of freedom (translation and rotation axes)
+</ParamField>
+
+### JPH_BodyCreationSettings_GetAllowDynamicOrKinematic
+
+Gets whether the body can switch between dynamic and kinematic.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `bool` - True if switching is allowed
+
+### JPH_BodyCreationSettings_SetAllowDynamicOrKinematic
+
+Sets whether the body can switch between dynamic and kinematic.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="bool">
+  True to allow switching
+</ParamField>
+
+### JPH_BodyCreationSettings_GetCollideKinematicVsNonDynamic
+
+Gets whether kinematic bodies collide with non-dynamic bodies.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `bool` - True if kinematic-vs-static collision is enabled
+
+### JPH_BodyCreationSettings_SetCollideKinematicVsNonDynamic
+
+Sets whether kinematic bodies collide with non-dynamic bodies.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="bool">
+  True to enable collision
+</ParamField>
+
+### JPH_BodyCreationSettings_GetUseManifoldReduction
+
+Gets whether manifold reduction is enabled.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `bool` - True if manifold reduction is enabled
+
+### JPH_BodyCreationSettings_SetUseManifoldReduction
+
+Sets whether manifold reduction is enabled.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="bool">
+  True to enable manifold reduction
+</ParamField>
+
+### JPH_BodyCreationSettings_GetApplyGyroscopicForce
+
+Gets whether gyroscopic force is applied.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `bool` - True if gyroscopic force is applied
+
+### JPH_BodyCreationSettings_SetApplyGyroscopicForce
+
+Sets whether gyroscopic force is applied.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="bool">
+  True to apply gyroscopic force
+</ParamField>
+
+### JPH_BodyCreationSettings_GetEnhancedInternalEdgeRemoval
+
+Gets whether enhanced internal edge removal is enabled.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `bool` - True if enhanced internal edge removal is enabled
+
+### JPH_BodyCreationSettings_SetEnhancedInternalEdgeRemoval
+
+Sets whether enhanced internal edge removal is enabled.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="bool">
+  True to enable enhanced internal edge removal
+</ParamField>
+
+### JPH_BodyCreationSettings_GetAllowSleeping
+
+Gets whether the body can go to sleep.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `bool` - True if sleeping is allowed
+
+### JPH_BodyCreationSettings_SetAllowSleeping
+
+Sets whether the body can go to sleep.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="bool">
+  True to allow sleeping
+</ParamField>
+
+## Velocity Limits
+
+### JPH_BodyCreationSettings_GetMaxLinearVelocity
+
+Gets the maximum linear velocity.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `float` - The maximum linear velocity
+
+### JPH_BodyCreationSettings_SetMaxLinearVelocity
+
+Sets the maximum linear velocity.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="float">
+  The maximum linear velocity
+</ParamField>
+
+### JPH_BodyCreationSettings_GetMaxAngularVelocity
+
+Gets the maximum angular velocity.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `float` - The maximum angular velocity
+
+### JPH_BodyCreationSettings_SetMaxAngularVelocity
+
+Sets the maximum angular velocity.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="float">
+  The maximum angular velocity
+</ParamField>
+
+## Solver Settings
+
+### JPH_BodyCreationSettings_GetNumVelocityStepsOverride
+
+Gets the velocity solver iteration override.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `uint32_t` - The number of velocity steps (0 = use default)
+
+### JPH_BodyCreationSettings_SetNumVelocityStepsOverride
+
+Sets the velocity solver iteration override.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="uint32_t">
+  The number of velocity steps
+</ParamField>
+
+### JPH_BodyCreationSettings_GetNumPositionStepsOverride
+
+Gets the position solver iteration override.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `uint32_t` - The number of position steps (0 = use default)
+
+### JPH_BodyCreationSettings_SetNumPositionStepsOverride
+
+Sets the position solver iteration override.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="uint32_t">
+  The number of position steps
+</ParamField>
+
+## Mass Properties
+
+### JPH_BodyCreationSettings_GetOverrideMassProperties
+
+Gets the mass properties override mode.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `JPH_OverrideMassProperties` - The override mode
+
+### JPH_BodyCreationSettings_SetOverrideMassProperties
+
+Sets the mass properties override mode.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="JPH_OverrideMassProperties">
+  The override mode
+</ParamField>
+
+### JPH_BodyCreationSettings_GetInertiaMultiplier
+
+Gets the inertia multiplier.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `float` - The inertia multiplier
+
+### JPH_BodyCreationSettings_SetInertiaMultiplier
+
+Sets the inertia multiplier.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="float">
+  The inertia multiplier
+</ParamField>
+
+### JPH_BodyCreationSettings_GetMassPropertiesOverride
+
+Gets the mass properties override.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="result" type="JPH_MassProperties*">
+  Output parameter for the mass properties
+</ParamField>
+
+### JPH_BodyCreationSettings_SetMassPropertiesOverride
+
+Sets the mass properties override.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="massProperties" type="const JPH_MassProperties*">
+  The mass properties to set
+</ParamField>
+
+## User Data
+
+### JPH_BodyCreationSettings_GetUserData
+
+Gets the user data.
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+**Returns:** `uint64_t` - The user data
+
+### JPH_BodyCreationSettings_SetUserData
+
+Sets the user data.
+
+<ParamField path="settings" type="JPH_BodyCreationSettings*">
+  The settings object
+</ParamField>
+
+<ParamField path="value" type="uint64_t">
+  The user data to associate with the body
+</ParamField>
+
+## Example: Complete Body Creation Workflow
+
+```c
+// Create a shape
+JPH_Vec3 halfExtent = { 0.5f, 0.5f, 0.5f };
+JPH_BoxShape* boxShape = JPH_BoxShape_Create(&halfExtent, 0.05f);
+
+// Set up position and rotation
+JPH_RVec3 position = { 0.0f, 5.0f, 0.0f };
+JPH_Quat rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+
+// Create body settings
+JPH_BodyCreationSettings* settings = JPH_BodyCreationSettings_Create3(
+    (JPH_Shape*)boxShape,
+    &position,
+    &rotation,
+    JPH_MotionType_Dynamic,
+    LAYER_MOVING
+);
+
+// Configure properties
+JPH_BodyCreationSettings_SetFriction(settings, 0.5f);
+JPH_BodyCreationSettings_SetRestitution(settings, 0.3f);
+JPH_BodyCreationSettings_SetGravityFactor(settings, 1.0f);
+
+// Create and add the body
+JPH_BodyID bodyID = JPH_BodyInterface_CreateAndAddBody(
+    bodyInterface,
+    settings,
+    JPH_Activation_Activate
+);
+
+// Clean up
+JPH_BodyCreationSettings_Destroy(settings);
+JPH_Shape_Destroy((JPH_Shape*)boxShape);
+```

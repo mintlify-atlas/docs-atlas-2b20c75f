@@ -1,0 +1,1396 @@
+---
+title: Body Interface
+description: Functions for managing rigid bodies in the physics world
+---
+
+The `JPH_BodyInterface` provides the main API for creating, adding, removing, and manipulating rigid bodies in the physics simulation. This is the primary interface for body operations.
+
+## Body Creation
+
+### JPH_BodyInterface_CreateBody
+
+Creates a body but does not add it to the physics system.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  Body creation settings
+</ParamField>
+
+**Returns:** `JPH_Body*` - The created body
+
+### JPH_BodyInterface_CreateBodyWithID
+
+Creates a body with a specific ID.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The desired body ID
+</ParamField>
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  Body creation settings
+</ParamField>
+
+**Returns:** `JPH_Body*` - The created body
+
+### JPH_BodyInterface_CreateBodyWithoutID
+
+Creates a body without assigning it an ID.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  Body creation settings
+</ParamField>
+
+**Returns:** `JPH_Body*` - The created body
+
+### JPH_BodyInterface_CreateAndAddBody
+
+Creates a body and adds it to the physics system in one operation.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="settings" type="const JPH_BodyCreationSettings*">
+  Body creation settings
+</ParamField>
+
+<ParamField path="activationMode" type="JPH_Activation">
+  Whether to activate the body immediately (`JPH_Activation_Activate` or `JPH_Activation_DontActivate`)
+</ParamField>
+
+**Returns:** `JPH_BodyID` - The ID of the created body
+
+```c
+JPH_BodyCreationSettings* settings = JPH_BodyCreationSettings_Create3(
+    shape, &position, &rotation, JPH_MotionType_Dynamic, objectLayer);
+
+JPH_BodyID bodyID = JPH_BodyInterface_CreateAndAddBody(
+    bodyInterface, settings, JPH_Activation_Activate);
+
+JPH_BodyCreationSettings_Destroy(settings);
+```
+
+## Body Management
+
+### JPH_BodyInterface_AddBody
+
+Adds a previously created body to the physics system.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The body ID to add
+</ParamField>
+
+<ParamField path="activationMode" type="JPH_Activation">
+  Whether to activate the body
+</ParamField>
+
+### JPH_BodyInterface_RemoveBody
+
+Removes a body from the physics system but does not destroy it.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The body ID to remove
+</ParamField>
+
+### JPH_BodyInterface_RemoveAndDestroyBody
+
+Removes a body from the physics system and destroys it.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The body ID to remove and destroy
+</ParamField>
+
+### JPH_BodyInterface_DestroyBody
+
+Destroys a body that has already been removed from the physics system.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The body ID to destroy
+</ParamField>
+
+### JPH_BodyInterface_IsAdded
+
+Checks if a body has been added to the physics system.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The body ID to check
+</ParamField>
+
+**Returns:** `bool` - True if the body is in the physics system
+
+## Position and Rotation
+
+### JPH_BodyInterface_SetPosition
+
+Sets the position of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="position" type="JPH_RVec3*">
+  The new position
+</ParamField>
+
+<ParamField path="activationMode" type="JPH_Activation">
+  Whether to activate the body
+</ParamField>
+
+### JPH_BodyInterface_GetPosition
+
+Gets the position of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="result" type="JPH_RVec3*">
+  Output parameter for the position
+</ParamField>
+
+### JPH_BodyInterface_SetRotation
+
+Sets the rotation of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="rotation" type="JPH_Quat*">
+  The new rotation quaternion
+</ParamField>
+
+<ParamField path="activationMode" type="JPH_Activation">
+  Whether to activate the body
+</ParamField>
+
+### JPH_BodyInterface_GetRotation
+
+Gets the rotation of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="result" type="JPH_Quat*">
+  Output parameter for the rotation
+</ParamField>
+
+### JPH_BodyInterface_SetPositionAndRotation
+
+Sets both position and rotation of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="position" type="const JPH_RVec3*">
+  The new position
+</ParamField>
+
+<ParamField path="rotation" type="const JPH_Quat*">
+  The new rotation
+</ParamField>
+
+<ParamField path="activationMode" type="JPH_Activation">
+  Whether to activate the body
+</ParamField>
+
+### JPH_BodyInterface_SetPositionAndRotationWhenChanged
+
+Sets position and rotation only if they differ from current values.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="position" type="const JPH_RVec3*">
+  The new position
+</ParamField>
+
+<ParamField path="rotation" type="const JPH_Quat*">
+  The new rotation
+</ParamField>
+
+<ParamField path="activationMode" type="JPH_Activation">
+  Whether to activate the body
+</ParamField>
+
+### JPH_BodyInterface_GetPositionAndRotation
+
+Gets both position and rotation of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="position" type="JPH_RVec3*">
+  Output parameter for position
+</ParamField>
+
+<ParamField path="rotation" type="JPH_Quat*">
+  Output parameter for rotation
+</ParamField>
+
+### JPH_BodyInterface_GetCenterOfMassPosition
+
+Gets the center of mass position.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="position" type="JPH_RVec3*">
+  Output parameter for the center of mass position
+</ParamField>
+
+## Velocity
+
+### JPH_BodyInterface_SetLinearVelocity
+
+Sets the linear velocity of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="velocity" type="const JPH_Vec3*">
+  The new linear velocity
+</ParamField>
+
+### JPH_BodyInterface_GetLinearVelocity
+
+Gets the linear velocity of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="velocity" type="JPH_Vec3*">
+  Output parameter for the linear velocity
+</ParamField>
+
+### JPH_BodyInterface_SetAngularVelocity
+
+Sets the angular velocity of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="angularVelocity" type="JPH_Vec3*">
+  The new angular velocity
+</ParamField>
+
+### JPH_BodyInterface_GetAngularVelocity
+
+Gets the angular velocity of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="angularVelocity" type="JPH_Vec3*">
+  Output parameter for the angular velocity
+</ParamField>
+
+### JPH_BodyInterface_SetLinearAndAngularVelocity
+
+Sets both linear and angular velocity.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="linearVelocity" type="JPH_Vec3*">
+  The new linear velocity
+</ParamField>
+
+<ParamField path="angularVelocity" type="JPH_Vec3*">
+  The new angular velocity
+</ParamField>
+
+### JPH_BodyInterface_GetLinearAndAngularVelocity
+
+Gets both linear and angular velocity.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="linearVelocity" type="JPH_Vec3*">
+  Output parameter for linear velocity
+</ParamField>
+
+<ParamField path="angularVelocity" type="JPH_Vec3*">
+  Output parameter for angular velocity
+</ParamField>
+
+### JPH_BodyInterface_AddLinearVelocity
+
+Adds to the linear velocity of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="linearVelocity" type="JPH_Vec3*">
+  The velocity to add
+</ParamField>
+
+### JPH_BodyInterface_AddLinearAndAngularVelocity
+
+Adds to both linear and angular velocity.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="linearVelocity" type="JPH_Vec3*">
+  The linear velocity to add
+</ParamField>
+
+<ParamField path="angularVelocity" type="JPH_Vec3*">
+  The angular velocity to add
+</ParamField>
+
+### JPH_BodyInterface_GetPointVelocity
+
+Gets the velocity at a specific point on the body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="point" type="JPH_RVec3*">
+  The world space point
+</ParamField>
+
+<ParamField path="velocity" type="JPH_Vec3*">
+  Output parameter for the velocity at the point
+</ParamField>
+
+### JPH_BodyInterface_SetPositionRotationAndVelocity
+
+Sets position, rotation, and velocities in one call.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="position" type="JPH_RVec3*">
+  The new position
+</ParamField>
+
+<ParamField path="rotation" type="JPH_Quat*">
+  The new rotation
+</ParamField>
+
+<ParamField path="linearVelocity" type="JPH_Vec3*">
+  The new linear velocity
+</ParamField>
+
+<ParamField path="angularVelocity" type="JPH_Vec3*">
+  The new angular velocity
+</ParamField>
+
+## Forces and Impulses
+
+### JPH_BodyInterface_AddForce
+
+Adds a force to the center of mass.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="force" type="JPH_Vec3*">
+  The force vector to add
+</ParamField>
+
+### JPH_BodyInterface_AddForce2
+
+Adds a force at a specific point.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="force" type="JPH_Vec3*">
+  The force vector to add
+</ParamField>
+
+<ParamField path="point" type="JPH_RVec3*">
+  The world space point where the force is applied
+</ParamField>
+
+### JPH_BodyInterface_AddTorque
+
+Adds torque to a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="torque" type="JPH_Vec3*">
+  The torque vector to add
+</ParamField>
+
+### JPH_BodyInterface_AddForceAndTorque
+
+Adds both force and torque.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="force" type="JPH_Vec3*">
+  The force vector to add
+</ParamField>
+
+<ParamField path="torque" type="JPH_Vec3*">
+  The torque vector to add
+</ParamField>
+
+### JPH_BodyInterface_AddImpulse
+
+Adds an impulse to the center of mass.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="impulse" type="JPH_Vec3*">
+  The impulse vector to add
+</ParamField>
+
+### JPH_BodyInterface_AddImpulse2
+
+Adds an impulse at a specific point.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="impulse" type="JPH_Vec3*">
+  The impulse vector to add
+</ParamField>
+
+<ParamField path="point" type="JPH_RVec3*">
+  The world space point where the impulse is applied
+</ParamField>
+
+### JPH_BodyInterface_AddAngularImpulse
+
+Adds an angular impulse (torque impulse) to a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="angularImpulse" type="JPH_Vec3*">
+  The angular impulse vector to add
+</ParamField>
+
+## Body Properties
+
+### JPH_BodyInterface_GetMotionType
+
+Gets the motion type of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+**Returns:** `JPH_MotionType` - The motion type (Static, Kinematic, or Dynamic)
+
+### JPH_BodyInterface_SetMotionType
+
+Sets the motion type of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="motionType" type="JPH_MotionType">
+  The new motion type
+</ParamField>
+
+<ParamField path="activationMode" type="JPH_Activation">
+  Whether to activate the body
+</ParamField>
+
+### JPH_BodyInterface_GetMotionQuality
+
+Gets the motion quality of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+**Returns:** `JPH_MotionQuality` - The motion quality (Discrete or LinearCast)
+
+### JPH_BodyInterface_SetMotionQuality
+
+Sets the motion quality of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="quality" type="JPH_MotionQuality">
+  The new motion quality
+</ParamField>
+
+### JPH_BodyInterface_GetRestitution
+
+Gets the restitution (bounciness) of a body.
+
+<ParamField path="bodyInterface" type="const JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+**Returns:** `float` - The restitution coefficient (0 = no bounce, 1 = perfect bounce)
+
+### JPH_BodyInterface_SetRestitution
+
+Sets the restitution (bounciness) of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="restitution" type="float">
+  The restitution coefficient
+</ParamField>
+
+### JPH_BodyInterface_GetFriction
+
+Gets the friction coefficient of a body.
+
+<ParamField path="bodyInterface" type="const JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+**Returns:** `float` - The friction coefficient
+
+### JPH_BodyInterface_SetFriction
+
+Sets the friction coefficient of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="friction" type="float">
+  The friction coefficient
+</ParamField>
+
+### JPH_BodyInterface_GetGravityFactor
+
+Gets the gravity factor of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+**Returns:** `float` - The gravity factor (1.0 = normal gravity, 0.0 = no gravity)
+
+### JPH_BodyInterface_SetGravityFactor
+
+Sets the gravity factor of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="value" type="float">
+  The gravity factor
+</ParamField>
+
+### JPH_BodyInterface_GetUserData
+
+Gets the user data associated with a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+**Returns:** `uint64_t` - The user data
+
+### JPH_BodyInterface_SetUserData
+
+Sets the user data associated with a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="inUserData" type="uint64_t">
+  The user data to set
+</ParamField>
+
+## Shape Management
+
+### JPH_BodyInterface_GetShape
+
+Gets the shape of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+**Returns:** `const JPH_Shape*` - The body's shape
+
+### JPH_BodyInterface_SetShape
+
+Sets the shape of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="shape" type="const JPH_Shape*">
+  The new shape
+</ParamField>
+
+<ParamField path="updateMassProperties" type="bool">
+  Whether to recalculate mass properties
+</ParamField>
+
+<ParamField path="activationMode" type="JPH_Activation">
+  Whether to activate the body
+</ParamField>
+
+### JPH_BodyInterface_NotifyShapeChanged
+
+Notifies the physics system that a shape has changed.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="previousCenterOfMass" type="JPH_Vec3*">
+  The previous center of mass
+</ParamField>
+
+<ParamField path="updateMassProperties" type="bool">
+  Whether to recalculate mass properties
+</ParamField>
+
+<ParamField path="activationMode" type="JPH_Activation">
+  Whether to activate the body
+</ParamField>
+
+## Activation and Sleep
+
+### JPH_BodyInterface_ActivateBody
+
+Activates a single body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="const JPH_BodyID">
+  The body ID to activate
+</ParamField>
+
+### JPH_BodyInterface_ActivateBodies
+
+Activates multiple bodies.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyIDs" type="const JPH_BodyID*">
+  Array of body IDs to activate
+</ParamField>
+
+<ParamField path="count" type="uint32_t">
+  Number of bodies in the array
+</ParamField>
+
+### JPH_BodyInterface_ActivateBodiesInAABox
+
+Activates all bodies within an axis-aligned bounding box.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="box" type="const JPH_AABox*">
+  The bounding box
+</ParamField>
+
+<ParamField path="broadPhaseLayerFilter" type="const JPH_BroadPhaseLayerFilter*">
+  Filter for broad phase layers
+</ParamField>
+
+<ParamField path="objectLayerFilter" type="const JPH_ObjectLayerFilter*">
+  Filter for object layers
+</ParamField>
+
+### JPH_BodyInterface_DeactivateBody
+
+Deactivates a single body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="const JPH_BodyID">
+  The body ID to deactivate
+</ParamField>
+
+### JPH_BodyInterface_DeactivateBodies
+
+Deactivates multiple bodies.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyIDs" type="const JPH_BodyID*">
+  Array of body IDs to deactivate
+</ParamField>
+
+<ParamField path="count" type="uint32_t">
+  Number of bodies in the array
+</ParamField>
+
+### JPH_BodyInterface_IsActive
+
+Checks if a body is active.
+
+<ParamField path="bodyInterface" type="const JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="const JPH_BodyID">
+  The body ID to check
+</ParamField>
+
+**Returns:** `bool` - True if the body is active
+
+### JPH_BodyInterface_ResetSleepTimer
+
+Resets the sleep timer for a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="const JPH_BodyID">
+  The body ID
+</ParamField>
+
+## Collision and Layers
+
+### JPH_BodyInterface_GetObjectLayer
+
+Gets the object layer of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+**Returns:** `JPH_ObjectLayer` - The object layer
+
+### JPH_BodyInterface_SetObjectLayer
+
+Sets the object layer of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="layer" type="JPH_ObjectLayer">
+  The new object layer
+</ParamField>
+
+### JPH_BodyInterface_GetCollisionGroup
+
+Gets the collision group of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="result" type="JPH_CollisionGroup*">
+  Output parameter for the collision group
+</ParamField>
+
+### JPH_BodyInterface_SetCollisionGroup
+
+Sets the collision group of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="group" type="const JPH_CollisionGroup*">
+  The new collision group
+</ParamField>
+
+### JPH_BodyInterface_GetIsSensor
+
+Checks if a body is a sensor.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+**Returns:** `bool` - True if the body is a sensor
+
+### JPH_BodyInterface_SetIsSensor
+
+Sets whether a body is a sensor.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="value" type="bool">
+  True to make the body a sensor
+</ParamField>
+
+### JPH_BodyInterface_InvalidateContactCache
+
+Invalidates the contact cache for a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+## Transforms
+
+### JPH_BodyInterface_GetWorldTransform
+
+Gets the world transform of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="result" type="JPH_RMat4*">
+  Output parameter for the world transform matrix
+</ParamField>
+
+### JPH_BodyInterface_GetCenterOfMassTransform
+
+Gets the center of mass transform of a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="result" type="JPH_RMat4*">
+  Output parameter for the center of mass transform matrix
+</ParamField>
+
+## Kinematic Bodies
+
+### JPH_BodyInterface_MoveKinematic
+
+Moves a kinematic body to a target position and rotation.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="targetPosition" type="JPH_RVec3*">
+  The target position
+</ParamField>
+
+<ParamField path="targetRotation" type="JPH_Quat*">
+  The target rotation
+</ParamField>
+
+<ParamField path="deltaTime" type="float">
+  The time step duration
+</ParamField>
+
+## Advanced
+
+### JPH_BodyInterface_GetInverseInertia
+
+Gets the inverse inertia tensor in world space.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="result" type="JPH_Mat4*">
+  Output parameter for the inverse inertia tensor
+</ParamField>
+
+### JPH_BodyInterface_GetUseManifoldReduction
+
+Gets whether manifold reduction is enabled.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+**Returns:** `bool` - True if manifold reduction is enabled
+
+### JPH_BodyInterface_SetUseManifoldReduction
+
+Sets whether manifold reduction is enabled.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="value" type="bool">
+  True to enable manifold reduction
+</ParamField>
+
+### JPH_BodyInterface_ApplyBuoyancyImpulse
+
+Applies a buoyancy impulse to a body in a fluid.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="surfacePosition" type="const JPH_RVec3*">
+  The position of the fluid surface
+</ParamField>
+
+<ParamField path="surfaceNormal" type="const JPH_Vec3*">
+  The normal of the fluid surface
+</ParamField>
+
+<ParamField path="buoyancy" type="float">
+  The buoyancy factor
+</ParamField>
+
+<ParamField path="linearDrag" type="float">
+  The linear drag coefficient
+</ParamField>
+
+<ParamField path="angularDrag" type="float">
+  The angular drag coefficient
+</ParamField>
+
+<ParamField path="fluidVelocity" type="const JPH_Vec3*">
+  The velocity of the fluid
+</ParamField>
+
+<ParamField path="gravity" type="const JPH_Vec3*">
+  The gravity vector
+</ParamField>
+
+<ParamField path="deltaTime" type="float">
+  The time step duration
+</ParamField>
+
+**Returns:** `bool` - True if the impulse was applied
+
+### JPH_BodyInterface_GetMaterial
+
+Gets the physics material for a subshape.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyId" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+<ParamField path="subShapeID" type="JPH_SubShapeID">
+  The sub-shape ID
+</ParamField>
+
+**Returns:** `const JPH_PhysicsMaterial*` - The physics material
+
+### JPH_BodyInterface_GetBodyType
+
+Gets the body type (Rigid or Soft).
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The body ID
+</ParamField>
+
+**Returns:** `JPH_BodyType` - The body type
+
+## Soft Body Functions
+
+### JPH_BodyInterface_CreateSoftBody
+
+Creates a soft body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="settings" type="const JPH_SoftBodyCreationSettings*">
+  Soft body creation settings
+</ParamField>
+
+**Returns:** `JPH_Body*` - The created soft body
+
+### JPH_BodyInterface_CreateSoftBodyWithID
+
+Creates a soft body with a specific ID.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The desired body ID
+</ParamField>
+
+<ParamField path="settings" type="const JPH_SoftBodyCreationSettings*">
+  Soft body creation settings
+</ParamField>
+
+**Returns:** `JPH_Body*` - The created soft body
+
+### JPH_BodyInterface_CreateSoftBodyWithoutID
+
+Creates a soft body without assigning an ID.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="settings" type="const JPH_SoftBodyCreationSettings*">
+  Soft body creation settings
+</ParamField>
+
+**Returns:** `JPH_Body*` - The created soft body
+
+### JPH_BodyInterface_CreateAndAddSoftBody
+
+Creates and adds a soft body to the physics system.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="settings" type="const JPH_SoftBodyCreationSettings*">
+  Soft body creation settings
+</ParamField>
+
+<ParamField path="activationMode" type="JPH_Activation">
+  Whether to activate the body
+</ParamField>
+
+**Returns:** `JPH_BodyID` - The ID of the created soft body
+
+## Body ID Management
+
+### JPH_BodyInterface_DestroyBodyWithoutID
+
+Destroys a body that doesn't have an ID assigned.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="body" type="JPH_Body*">
+  The body to destroy
+</ParamField>
+
+### JPH_BodyInterface_AssignBodyID
+
+Assigns an ID to a body that was created without one.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="body" type="JPH_Body*">
+  The body
+</ParamField>
+
+**Returns:** `bool` - True if the ID was successfully assigned
+
+### JPH_BodyInterface_AssignBodyID2
+
+Assigns a specific ID to a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="body" type="JPH_Body*">
+  The body
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The desired body ID
+</ParamField>
+
+**Returns:** `bool` - True if the ID was successfully assigned
+
+### JPH_BodyInterface_UnassignBodyID
+
+Removes the ID from a body.
+
+<ParamField path="bodyInterface" type="JPH_BodyInterface*">
+  The body interface
+</ParamField>
+
+<ParamField path="bodyID" type="JPH_BodyID">
+  The body ID to unassign
+</ParamField>
+
+**Returns:** `JPH_Body*` - The body that had the ID removed

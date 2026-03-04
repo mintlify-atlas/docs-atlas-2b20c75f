@@ -1,0 +1,288 @@
+---
+title: Distance Constraint
+description: API reference for JPH_DistanceConstraint - constrains the distance between two points on bodies
+---
+
+# Distance Constraint
+
+The `JPH_DistanceConstraint` maintains a specific distance range between two points attached to two bodies. It allows rotation but restricts the distance between the attachment points to remain within minimum and maximum bounds.
+
+## Use Cases
+
+- Rope or chain simulation
+- Cable connections
+- Elastic connections between objects
+- Minimum/maximum distance enforcement
+- Spring-like behavior with spring settings
+
+## Types
+
+### JPH_DistanceConstraint
+
+```c
+typedef struct JPH_DistanceConstraint JPH_DistanceConstraint;
+```
+
+Opaque handle to a distance constraint instance.
+
+### JPH_DistanceConstraintSettings
+
+```c
+typedef struct JPH_DistanceConstraintSettings {
+    JPH_ConstraintSettings  base;
+    JPH_ConstraintSpace     space;
+    JPH_RVec3               point1;
+    JPH_RVec3               point2;
+    float                   minDistance;
+    float                   maxDistance;
+    JPH_SpringSettings      limitsSpringSettings;
+} JPH_DistanceConstraintSettings;
+```
+
+Settings structure for creating a distance constraint.
+
+<ParamField path="base" type="JPH_ConstraintSettings">
+  Base constraint settings (enabled, priority, etc.)
+</ParamField>
+
+<ParamField path="space" type="JPH_ConstraintSpace">
+  Coordinate space for the constraint points:
+  - `JPH_ConstraintSpace_LocalToBodyCOM`: Local to each body's center of mass
+  - `JPH_ConstraintSpace_WorldSpace`: World space coordinates
+</ParamField>
+
+<ParamField path="point1" type="JPH_RVec3">
+  Attachment point on body 1
+</ParamField>
+
+<ParamField path="point2" type="JPH_RVec3">
+  Attachment point on body 2
+</ParamField>
+
+<ParamField path="minDistance" type="float">
+  Minimum allowed distance between the points (meters)
+</ParamField>
+
+<ParamField path="maxDistance" type="float">
+  Maximum allowed distance between the points (meters)
+</ParamField>
+
+<ParamField path="limitsSpringSettings" type="JPH_SpringSettings">
+  Spring settings applied when limits are violated. Use this to make the constraint soft/elastic.
+</ParamField>
+
+## Functions
+
+### JPH_DistanceConstraintSettings_Init
+
+```c
+void JPH_DistanceConstraintSettings_Init(JPH_DistanceConstraintSettings* settings);
+```
+
+Initializes a distance constraint settings structure with default values.
+
+<ParamField path="settings" type="JPH_DistanceConstraintSettings*">
+  Pointer to settings structure to initialize
+</ParamField>
+
+### JPH_DistanceConstraint_Create
+
+```c
+JPH_DistanceConstraint* JPH_DistanceConstraint_Create(
+    const JPH_DistanceConstraintSettings* settings,
+    JPH_Body* body1,
+    JPH_Body* body2
+);
+```
+
+Creates a new distance constraint between two bodies.
+
+<ParamField path="settings" type="const JPH_DistanceConstraintSettings*">
+  Constraint configuration settings
+</ParamField>
+
+<ParamField path="body1" type="JPH_Body*">
+  First body to constrain
+</ParamField>
+
+<ParamField path="body2" type="JPH_Body*">
+  Second body to constrain
+</ParamField>
+
+<ResponseField name="return" type="JPH_DistanceConstraint*">
+  Pointer to the created constraint, or NULL on failure
+</ResponseField>
+
+### JPH_DistanceConstraint_GetSettings
+
+```c
+void JPH_DistanceConstraint_GetSettings(
+    const JPH_DistanceConstraint* constraint,
+    JPH_DistanceConstraintSettings* settings
+);
+```
+
+Retrieves the current settings of a distance constraint.
+
+<ParamField path="constraint" type="const JPH_DistanceConstraint*">
+  The constraint to query
+</ParamField>
+
+<ParamField path="settings" type="JPH_DistanceConstraintSettings*">
+  Output structure to receive the settings
+</ParamField>
+
+### JPH_DistanceConstraint_SetDistance
+
+```c
+void JPH_DistanceConstraint_SetDistance(
+    JPH_DistanceConstraint* constraint,
+    float minDistance,
+    float maxDistance
+);
+```
+
+Sets the minimum and maximum distance limits.
+
+<ParamField path="constraint" type="JPH_DistanceConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="minDistance" type="float">
+  New minimum distance (meters)
+</ParamField>
+
+<ParamField path="maxDistance" type="float">
+  New maximum distance (meters)
+</ParamField>
+
+### JPH_DistanceConstraint_GetMinDistance
+
+```c
+float JPH_DistanceConstraint_GetMinDistance(JPH_DistanceConstraint* constraint);
+```
+
+Gets the current minimum distance limit.
+
+<ParamField path="constraint" type="JPH_DistanceConstraint*">
+  The constraint to query
+</ParamField>
+
+<ResponseField name="return" type="float">
+  Minimum distance in meters
+</ResponseField>
+
+### JPH_DistanceConstraint_GetMaxDistance
+
+```c
+float JPH_DistanceConstraint_GetMaxDistance(JPH_DistanceConstraint* constraint);
+```
+
+Gets the current maximum distance limit.
+
+<ParamField path="constraint" type="JPH_DistanceConstraint*">
+  The constraint to query
+</ParamField>
+
+<ResponseField name="return" type="float">
+  Maximum distance in meters
+</ResponseField>
+
+### JPH_DistanceConstraint_GetLimitsSpringSettings
+
+```c
+void JPH_DistanceConstraint_GetLimitsSpringSettings(
+    JPH_DistanceConstraint* constraint,
+    JPH_SpringSettings* result
+);
+```
+
+Gets the spring settings for distance limits.
+
+<ParamField path="constraint" type="JPH_DistanceConstraint*">
+  The constraint to query
+</ParamField>
+
+<ParamField path="result" type="JPH_SpringSettings*">
+  Output structure to receive the spring settings
+</ParamField>
+
+### JPH_DistanceConstraint_SetLimitsSpringSettings
+
+```c
+void JPH_DistanceConstraint_SetLimitsSpringSettings(
+    JPH_DistanceConstraint* constraint,
+    JPH_SpringSettings* settings
+);
+```
+
+Sets the spring settings for distance limits.
+
+<ParamField path="constraint" type="JPH_DistanceConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="settings" type="JPH_SpringSettings*">
+  New spring settings to apply
+</ParamField>
+
+### JPH_DistanceConstraint_GetTotalLambdaPosition
+
+```c
+float JPH_DistanceConstraint_GetTotalLambdaPosition(
+    const JPH_DistanceConstraint* constraint
+);
+```
+
+Gets the total Lagrange multiplier applied by the constraint. This represents the constraint force magnitude in the last simulation step.
+
+<ParamField path="constraint" type="const JPH_DistanceConstraint*">
+  The constraint to query
+</ParamField>
+
+<ResponseField name="return" type="float">
+  Constraint force magnitude
+</ResponseField>
+
+## Example
+
+```c
+// Create two bodies
+JPH_Body* ball1 = /* ... create first ball ... */;
+JPH_Body* ball2 = /* ... create second ball ... */;
+
+// Initialize constraint settings
+JPH_DistanceConstraintSettings settings;
+JPH_DistanceConstraintSettings_Init(&settings);
+
+// Configure as a rope with 5 meter length
+settings.space = JPH_ConstraintSpace_WorldSpace;
+settings.point1 = (JPH_RVec3){ 0, 5, 0 };
+settings.point2 = (JPH_RVec3){ 0, 0, 0 };
+settings.minDistance = 0.0f;    // Can be compressed
+settings.maxDistance = 5.0f;    // 5 meter maximum length
+
+// Make it stretchy with spring settings
+settings.limitsSpringSettings.mode = JPH_SpringMode_FrequencyAndDamping;
+settings.limitsSpringSettings.frequencyOrStiffness = 2.0f;
+settings.limitsSpringSettings.damping = 0.5f;
+
+// Create the constraint
+JPH_DistanceConstraint* constraint = JPH_DistanceConstraint_Create(
+    &settings,
+    ball1,
+    ball2
+);
+
+// Add to physics system
+JPH_PhysicsSystem_AddConstraint(physicsSystem, (JPH_Constraint*)constraint);
+
+// Later: Dynamically adjust the rope length
+JPH_DistanceConstraint_SetDistance(constraint, 0.0f, 3.0f);
+```
+
+## See Also
+
+- [Fixed Constraint](/api/constraints/fixed) - Rigid connection
+- [Hinge Constraint](/api/constraints/hinge) - Single-axis rotational joint
+- [Slider Constraint](/api/constraints/slider) - Single-axis linear joint

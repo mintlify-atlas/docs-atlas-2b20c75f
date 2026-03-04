@@ -1,0 +1,327 @@
+---
+title: 'Physics System'
+description: 'Understanding the JPH_PhysicsSystem and simulation loop in JoltC'
+---
+
+The `JPH_PhysicsSystem` is the central component of the JoltPhysics engine. It manages all bodies, constraints, and collision detection, and drives the physics simulation forward.
+
+## Creating the Physics System
+
+Before creating the physics system, you need to set up three key components:
+
+### 1. Broad Phase Layer Interface
+
+Maps object layers to broad phase layers for efficient spatial partitioning:
+
+```c
+JPH_BroadPhaseLayerInterface* broadPhaseLayerInterface = 
+    JPH_BroadPhaseLayerInterfaceTable_Create(2, 2);
+
+JPH_BroadPhaseLayerInterfaceTable_MapObjectToBroadPhaseLayer(
+    broadPhaseLayerInterface, Layers::NON_MOVING, BroadPhaseLayers::NON_MOVING);
+JPH_BroadPhaseLayerInterfaceTable_MapObjectToBroadPhaseLayer(
+    broadPhaseLayerInterface, Layers::MOVING, BroadPhaseLayers::MOVING);
+```
+
+### 2. Object Layer Pair Filter
+
+Defines which object layers can collide with each other:
+
+```c
+JPH_ObjectLayerPairFilter* objectLayerPairFilter = 
+    JPH_ObjectLayerPairFilterTable_Create(2);
+
+JPH_ObjectLayerPairFilterTable_EnableCollision(
+    objectLayerPairFilter, Layers::NON_MOVING, Layers::MOVING);
+JPH_ObjectLayerPairFilterTable_EnableCollision(
+    objectLayerPairFilter, Layers::MOVING, Layers::MOVING);
+```
+
+### 3. Object vs Broad Phase Layer Filter
+
+Combines the previous two for efficient collision filtering:
+
+```c
+JPH_ObjectVsBroadPhaseLayerFilter* objectVsBroadPhaseLayerFilter = 
+    JPH_ObjectVsBroadPhaseLayerFilterTable_Create(
+        broadPhaseLayerInterface, 2, 
+        objectLayerPairFilter, 2);
+```
+
+## Physics System Settings
+
+The `JPH_PhysicsSystemSettings` structure configures the physics system:
+
+```c
+typedef struct JPH_PhysicsSystemSettings {
+    uint32_t maxBodies;                           // Maximum number of bodies (e.g., 65536)
+    uint32_t numBodyMutexes;                      // 0 for auto-detect
+    uint32_t maxBodyPairs;                        // Max simultaneous colliding pairs
+    uint32_t maxContactConstraints;               // Max contact constraints
+    JPH_BroadPhaseLayerInterface* broadPhaseLayerInterface;
+    JPH_ObjectLayerPairFilter* objectLayerPairFilter;
+    JPH_ObjectVsBroadPhaseLayerFilter* objectVsBroadPhaseLayerFilter;
+} JPH_PhysicsSystemSettings;
+```
+
+<Note>
+  Choose `maxBodies`, `maxBodyPairs`, and `maxContactConstraints` based on your simulation needs. Higher values consume more memory.
+</Note>
+
+## Creating the System
+
+```c
+JPH_PhysicsSystemSettings settings = {};
+settings.maxBodies = 65536;
+settings.numBodyMutexes = 0;  // Auto-detect
+settings.maxBodyPairs = 65536;
+settings.maxContactConstraints = 65536;
+settings.broadPhaseLayerInterface = broadPhaseLayerInterface;
+settings.objectLayerPairFilter = objectLayerPairFilter;
+settings.objectVsBroadPhaseLayerFilter = objectVsBroadPhaseLayerFilter;
+
+JPH_PhysicsSystem* system = JPH_PhysicsSystem_Create(&settings);
+```
+
+## The Simulation Loop
+
+The physics simulation advances in discrete time steps:
+
+```c
+const float deltaTime = 1.0f / 60.0f;  // 60 Hz simulation
+const int collisionSteps = 1;
+
+// Optimize broad phase before starting (once at startup)
+JPH_PhysicsSystem_OptimizeBroadPhase(system);
+
+while (running) {
+    // Step the physics world
+    JPH_PhysicsUpdateError result = JPH_PhysicsSystem_Update(
+        system, 
+        deltaTime, 
+        collisionSteps, 
+        jobSystem);
+    
+    if (result != JPH_PhysicsUpdateError_None) {
+        // Handle errors (cache full, etc.)
+    }
+}
+```
+
+### Update Errors
+
+```c
+typedef enum JPH_PhysicsUpdateError {
+    JPH_PhysicsUpdateError_None = 0,
+    JPH_PhysicsUpdateError_ManifoldCacheFull = 1 << 0,
+    JPH_PhysicsUpdateError_BodyPairCacheFull = 1 << 1,
+    JPH_PhysicsUpdateError_ContactConstraintsFull = 1 << 2,
+} JPH_PhysicsUpdateError;
+```
+
+<Warning>
+  If you encounter cache full errors, increase the corresponding limit in `JPH_PhysicsSystemSettings`.
+</Warning>
+
+## Physics Settings
+
+Fine-tune simulation behavior with `JPH_PhysicsSettings`:
+
+```c
+JPH_PhysicsSettings physicsSettings;
+JPH_PhysicsSystem_GetPhysicsSettings(system, &physicsSettings);
+
+// Modify settings
+physicsSettings.numVelocitySteps = 10;        // Default: 10
+physicsSettings.numPositionSteps = 2;          // Default: 2
+physicsSettings.baumgarte = 0.2f;              // Constraint stabilization
+physicsSettings.speculativeContactDistance = 0.02f;
+physicsSettings.penetrationSlop = 0.02f;
+physicsSettings.minVelocityForRestitution = 1.0f;
+physicsSettings.timeBeforeSleep = 0.5f;
+physicsSettings.allowSleeping = true;
+
+JPH_PhysicsSystem_SetPhysicsSettings(system, &physicsSettings);
+```
+
+## Gravity
+
+Set the global gravity vector:
+
+```c
+JPH_Vec3 gravity = { 0.0f, -9.81f, 0.0f };
+JPH_PhysicsSystem_SetGravity(system, &gravity);
+
+// Get current gravity
+JPH_Vec3 currentGravity;
+JPH_PhysicsSystem_GetGravity(system, &currentGravity);
+```
+
+## Accessing Bodies
+
+The physics system provides two interfaces for body manipulation:
+
+### Thread-Safe Interface
+
+```c
+JPH_BodyInterface* bodyInterface = 
+    JPH_PhysicsSystem_GetBodyInterface(system);
+```
+
+Use this interface when the physics system might be stepping (includes locks).
+
+### Lock-Free Interface
+
+```c
+JPH_BodyInterface* bodyInterfaceNoLock = 
+    JPH_PhysicsSystem_GetBodyInterfaceNoLock(system);
+```
+
+<Warning>
+  Only use `GetBodyInterfaceNoLock()` when you're certain the physics system is not updating. Otherwise, use the thread-safe version.
+</Warning>
+
+## Querying the System
+
+```c
+// Get statistics
+uint32_t totalBodies = JPH_PhysicsSystem_GetNumBodies(system);
+uint32_t activeDynamicBodies = JPH_PhysicsSystem_GetNumActiveBodies(
+    system, JPH_BodyType_Rigid);
+uint32_t maxBodies = JPH_PhysicsSystem_GetMaxBodies(system);
+uint32_t numConstraints = JPH_PhysicsSystem_GetNumConstraints(system);
+
+// Check if two bodies are in contact
+bool inContact = JPH_PhysicsSystem_WereBodiesInContact(
+    system, bodyID1, bodyID2);
+```
+
+## Object Layers
+
+Object layers are user-defined collision groups:
+
+```c
+typedef uint32_t JPH_ObjectLayer;
+
+// Example layer setup
+static constexpr JPH_ObjectLayer NON_MOVING = 0;
+static constexpr JPH_ObjectLayer MOVING = 1;
+static constexpr JPH_ObjectLayer DEBRIS = 2;
+static constexpr JPH_ObjectLayer NUM_LAYERS = 3;
+```
+
+### Broad Phase Layers
+
+Broad phase layers are coarse collision groups for spatial partitioning:
+
+```c
+typedef uint8_t JPH_BroadPhaseLayer;
+
+// Example: Map multiple object layers to fewer broad phase layers
+static constexpr JPH_BroadPhaseLayer NON_MOVING_BP(0);
+static constexpr JPH_BroadPhaseLayer MOVING_BP(1);
+```
+
+<Tip>
+  Use fewer broad phase layers (2-8) than object layers for optimal performance. Static objects should use a separate broad phase layer.
+</Tip>
+
+## Cleanup
+
+Destroy the physics system when done:
+
+```c
+JPH_PhysicsSystem_Destroy(system);
+```
+
+## Complete Example
+
+```c
+#include "joltc.h"
+
+// Define layers
+enum Layers {
+    NON_MOVING = 0,
+    MOVING = 1,
+    NUM_LAYERS = 2
+};
+
+enum BroadPhaseLayers {
+    NON_MOVING_BP = 0,
+    MOVING_BP = 1,
+    NUM_BP_LAYERS = 2
+};
+
+int main() {
+    // Initialize Jolt
+    JPH_Init();
+    
+    // Create job system
+    JPH_JobSystem* jobSystem = JPH_JobSystemThreadPool_Create(NULL);
+    
+    // Create layer filters
+    JPH_ObjectLayerPairFilter* objectLayerPairFilter = 
+        JPH_ObjectLayerPairFilterTable_Create(NUM_LAYERS);
+    JPH_ObjectLayerPairFilterTable_EnableCollision(
+        objectLayerPairFilter, NON_MOVING, MOVING);
+    JPH_ObjectLayerPairFilterTable_EnableCollision(
+        objectLayerPairFilter, MOVING, MOVING);
+    
+    JPH_BroadPhaseLayerInterface* broadPhaseLayerInterface = 
+        JPH_BroadPhaseLayerInterfaceTable_Create(NUM_LAYERS, NUM_BP_LAYERS);
+    JPH_BroadPhaseLayerInterfaceTable_MapObjectToBroadPhaseLayer(
+        broadPhaseLayerInterface, NON_MOVING, NON_MOVING_BP);
+    JPH_BroadPhaseLayerInterfaceTable_MapObjectToBroadPhaseLayer(
+        broadPhaseLayerInterface, MOVING, MOVING_BP);
+    
+    JPH_ObjectVsBroadPhaseLayerFilter* objectVsBroadPhaseLayerFilter = 
+        JPH_ObjectVsBroadPhaseLayerFilterTable_Create(
+            broadPhaseLayerInterface, NUM_BP_LAYERS,
+            objectLayerPairFilter, NUM_LAYERS);
+    
+    // Create physics system
+    JPH_PhysicsSystemSettings settings = {};
+    settings.maxBodies = 1024;
+    settings.maxBodyPairs = 1024;
+    settings.maxContactConstraints = 1024;
+    settings.broadPhaseLayerInterface = broadPhaseLayerInterface;
+    settings.objectLayerPairFilter = objectLayerPairFilter;
+    settings.objectVsBroadPhaseLayerFilter = objectVsBroadPhaseLayerFilter;
+    
+    JPH_PhysicsSystem* system = JPH_PhysicsSystem_Create(&settings);
+    
+    // Set gravity
+    JPH_Vec3 gravity = { 0.0f, -9.81f, 0.0f };
+    JPH_PhysicsSystem_SetGravity(system, &gravity);
+    
+    // Optimize broad phase
+    JPH_PhysicsSystem_OptimizeBroadPhase(system);
+    
+    // Simulation loop
+    const float deltaTime = 1.0f / 60.0f;
+    for (int step = 0; step < 1000; ++step) {
+        JPH_PhysicsSystem_Update(system, deltaTime, 1, jobSystem);
+    }
+    
+    // Cleanup
+    JPH_PhysicsSystem_Destroy(system);
+    JPH_JobSystem_Destroy(jobSystem);
+    JPH_Shutdown();
+    
+    return 0;
+}
+```
+
+## See Also
+
+<CardGroup cols={2}>
+  <Card title="Bodies" icon="cube" href="/core/bodies">
+    Learn about creating and managing physics bodies
+  </Card>
+  <Card title="Shapes" icon="shapes" href="/core/shapes">
+    Explore available collision shapes
+  </Card>
+  <Card title="Collision Detection" icon="intersection" href="/core/collision-detection">
+    Understand how collisions are detected and filtered
+  </Card>
+</CardGroup>

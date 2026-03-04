@@ -1,0 +1,443 @@
+---
+title: 'Character'
+description: 'Physics-based character controller with rigid body simulation'
+---
+
+The `JPH_Character` provides a physics-based character controller that uses a rigid body for movement and collision detection. It's suitable for characters that need realistic physics interactions.
+
+## Types
+
+### JPH_Character
+
+Opaque handle to a character instance.
+
+### JPH_CharacterSettings
+
+Configuration structure for creating a character.
+
+<ParamField body="base" type="JPH_CharacterBaseSettings">
+  Base character settings including up vector, supporting volume, max slope angle, and shape
+</ParamField>
+
+<ParamField body="layer" type="JPH_ObjectLayer">
+  The physics layer this character will be in
+</ParamField>
+
+<ParamField body="mass" type="float">
+  The mass of the character in kilograms
+</ParamField>
+
+<ParamField body="friction" type="float">
+  Friction coefficient (0 = no friction, 1 = full friction)
+</ParamField>
+
+<ParamField body="gravityFactor" type="float">
+  Factor to multiply gravity with (1.0 = normal gravity, 0.0 = no gravity)
+</ParamField>
+
+<ParamField body="allowedDOFs" type="JPH_AllowedDOFs">
+  Which degrees of freedom are allowed for movement
+</ParamField>
+
+## Functions
+
+### Initialization
+
+#### JPH_CharacterSettings_Init
+
+```c
+void JPH_CharacterSettings_Init(JPH_CharacterSettings* settings)
+```
+
+Initialize character settings with default values.
+
+<ParamField path="settings" type="JPH_CharacterSettings*">
+  Pointer to settings structure to initialize
+</ParamField>
+
+#### JPH_Character_Create
+
+```c
+JPH_Character* JPH_Character_Create(
+    const JPH_CharacterSettings* settings,
+    const JPH_RVec3* position,
+    const JPH_Quat* rotation,
+    uint64_t userData,
+    JPH_PhysicsSystem* system
+)
+```
+
+Create a new character controller.
+
+<ParamField path="settings" type="const JPH_CharacterSettings*">
+  Character configuration settings
+</ParamField>
+
+<ParamField path="position" type="const JPH_RVec3*">
+  Initial world position
+</ParamField>
+
+<ParamField path="rotation" type="const JPH_Quat*">
+  Initial rotation
+</ParamField>
+
+<ParamField path="userData" type="uint64_t">
+  User data to associate with this character
+</ParamField>
+
+<ParamField path="system" type="JPH_PhysicsSystem*">
+  Physics system to create the character in
+</ParamField>
+
+**Returns**: Handle to the created character, or NULL on failure
+
+### Physics System Integration
+
+#### JPH_Character_AddToPhysicsSystem
+
+```c
+void JPH_Character_AddToPhysicsSystem(
+    JPH_Character* character,
+    JPH_Activation activationMode,
+    bool lockBodies
+)
+```
+
+Add the character to the physics system.
+
+<ParamField path="character" type="JPH_Character*">
+  Character to add
+</ParamField>
+
+<ParamField path="activationMode" type="JPH_Activation">
+  Whether to activate the character immediately
+</ParamField>
+
+<ParamField path="lockBodies" type="bool" default="true">
+  Whether to lock bodies during this operation
+</ParamField>
+
+#### JPH_Character_RemoveFromPhysicsSystem
+
+```c
+void JPH_Character_RemoveFromPhysicsSystem(
+    JPH_Character* character,
+    bool lockBodies
+)
+```
+
+Remove the character from the physics system.
+
+#### JPH_Character_Activate
+
+```c
+void JPH_Character_Activate(
+    JPH_Character* character,
+    bool lockBodies
+)
+```
+
+Activate the character's body.
+
+### Update
+
+#### JPH_Character_PostSimulation
+
+```c
+void JPH_Character_PostSimulation(
+    JPH_Character* character,
+    float maxSeparationDistance,
+    bool lockBodies
+)
+```
+
+Update the character after physics simulation. Should be called after each physics step.
+
+<ParamField path="character" type="JPH_Character*">
+  Character to update
+</ParamField>
+
+<ParamField path="maxSeparationDistance" type="float">
+  Maximum distance to scan for ground contact
+</ParamField>
+
+<ParamField path="lockBodies" type="bool" default="true">
+  Whether to lock bodies during update
+</ParamField>
+
+### Position and Rotation
+
+#### JPH_Character_GetPosition
+
+```c
+void JPH_Character_GetPosition(
+    JPH_Character* character,
+    JPH_RVec3* position,
+    bool lockBodies
+)
+```
+
+Get the character's world position.
+
+#### JPH_Character_SetPosition
+
+```c
+void JPH_Character_SetPosition(
+    JPH_Character* character,
+    const JPH_RVec3* position,
+    JPH_Activation activationMode,
+    bool lockBodies
+)
+```
+
+Set the character's world position.
+
+#### JPH_Character_GetRotation
+
+```c
+void JPH_Character_GetRotation(
+    JPH_Character* character,
+    JPH_Quat* rotation,
+    bool lockBodies
+)
+```
+
+Get the character's rotation.
+
+#### JPH_Character_SetRotation
+
+```c
+void JPH_Character_SetRotation(
+    JPH_Character* character,
+    const JPH_Quat* rotation,
+    JPH_Activation activationMode,
+    bool lockBodies
+)
+```
+
+Set the character's rotation.
+
+#### JPH_Character_GetPositionAndRotation
+
+```c
+void JPH_Character_GetPositionAndRotation(
+    JPH_Character* character,
+    JPH_RVec3* position,
+    JPH_Quat* rotation,
+    bool lockBodies
+)
+```
+
+Get both position and rotation in a single call.
+
+#### JPH_Character_SetPositionAndRotation
+
+```c
+void JPH_Character_SetPositionAndRotation(
+    JPH_Character* character,
+    const JPH_RVec3* position,
+    const JPH_Quat* rotation,
+    JPH_Activation activationMode,
+    bool lockBodies
+)
+```
+
+Set both position and rotation in a single call.
+
+#### JPH_Character_GetCenterOfMassPosition
+
+```c
+void JPH_Character_GetCenterOfMassPosition(
+    JPH_Character* character,
+    JPH_RVec3* result,
+    bool lockBodies
+)
+```
+
+Get the character's center of mass position.
+
+#### JPH_Character_GetWorldTransform
+
+```c
+void JPH_Character_GetWorldTransform(
+    JPH_Character* character,
+    JPH_RMat4* result,
+    bool lockBodies
+)
+```
+
+Get the character's world transformation matrix.
+
+### Velocity
+
+#### JPH_Character_GetLinearVelocity
+
+```c
+void JPH_Character_GetLinearVelocity(
+    JPH_Character* character,
+    JPH_Vec3* result
+)
+```
+
+Get the character's linear velocity.
+
+#### JPH_Character_SetLinearVelocity
+
+```c
+void JPH_Character_SetLinearVelocity(
+    JPH_Character* character,
+    const JPH_Vec3* value,
+    bool lockBodies
+)
+```
+
+Set the character's linear velocity.
+
+#### JPH_Character_AddLinearVelocity
+
+```c
+void JPH_Character_AddLinearVelocity(
+    JPH_Character* character,
+    const JPH_Vec3* value,
+    bool lockBodies
+)
+```
+
+Add to the character's linear velocity.
+
+#### JPH_Character_SetLinearAndAngularVelocity
+
+```c
+void JPH_Character_SetLinearAndAngularVelocity(
+    JPH_Character* character,
+    JPH_Vec3* linearVelocity,
+    JPH_Vec3* angularVelocity,
+    bool lockBodies
+)
+```
+
+Set both linear and angular velocity.
+
+#### JPH_Character_AddImpulse
+
+```c
+void JPH_Character_AddImpulse(
+    JPH_Character* character,
+    const JPH_Vec3* value,
+    bool lockBodies
+)
+```
+
+Apply an impulse to the character.
+
+### Properties
+
+#### JPH_Character_GetBodyID
+
+```c
+JPH_BodyID JPH_Character_GetBodyID(const JPH_Character* character)
+```
+
+Get the body ID of the underlying physics body.
+
+**Returns**: The body ID
+
+#### JPH_Character_GetLayer
+
+```c
+JPH_ObjectLayer JPH_Character_GetLayer(const JPH_Character* character)
+```
+
+Get the physics layer the character is in.
+
+#### JPH_Character_SetLayer
+
+```c
+void JPH_Character_SetLayer(
+    JPH_Character* character,
+    JPH_ObjectLayer value,
+    bool lockBodies
+)
+```
+
+Set the physics layer the character is in.
+
+#### JPH_Character_SetShape
+
+```c
+void JPH_Character_SetShape(
+    JPH_Character* character,
+    const JPH_Shape* shape,
+    float maxPenetrationDepth,
+    bool lockBodies
+)
+```
+
+Change the character's collision shape.
+
+<ParamField path="shape" type="const JPH_Shape*">
+  New collision shape
+</ParamField>
+
+<ParamField path="maxPenetrationDepth" type="float">
+  Maximum penetration depth to resolve
+</ParamField>
+
+## Example Usage
+
+```c
+// Initialize character settings
+JPH_CharacterSettings settings;
+JPH_CharacterSettings_Init(&settings);
+
+settings.layer = OBJECT_LAYER_MOVING;
+settings.mass = 70.0f;  // 70 kg
+settings.friction = 0.5f;
+settings.gravityFactor = 1.0f;
+
+// Create capsule shape for character
+JPH_Shape* shape = JPH_CapsuleShape_Create(0.9f, 0.3f);  // height, radius
+settings.base.shape = shape;
+
+// Set up vector (Y-up)
+JPH_Vec3 up = { 0.0f, 1.0f, 0.0f };
+settings.base.up = up;
+
+// Set max slope angle (45 degrees)
+settings.base.maxSlopeAngle = 0.785398f;  // 45 degrees in radians
+
+// Create character
+JPH_RVec3 position = { 0.0f, 10.0f, 0.0f };
+JPH_Quat rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+JPH_Character* character = JPH_Character_Create(
+    &settings,
+    &position,
+    &rotation,
+    0,  // userData
+    physicsSystem
+);
+
+// Add to physics system
+JPH_Character_AddToPhysicsSystem(character, JPH_Activation_Activate, true);
+
+// In game loop, apply movement
+JPH_Vec3 velocity = { 5.0f, 0.0f, 0.0f };  // Move right
+JPH_Character_SetLinearVelocity(character, &velocity, true);
+
+// After physics update
+JPH_Character_PostSimulation(character, 0.1f, true);
+
+// Get current position
+JPH_RVec3 currentPos;
+JPH_Character_GetPosition(character, &currentPos, true);
+
+// Cleanup
+JPH_Character_RemoveFromPhysicsSystem(character, true);
+JPH_CharacterBase_Destroy((JPH_CharacterBase*)character);
+JPH_Shape_Destroy(shape);
+```
+
+## See Also
+
+- [Character Virtual](/api/character/character-virtual) - Kinematic character controller
+- [Character Base](joltc.h:2268) - Base character functionality

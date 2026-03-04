@@ -1,80 +1,472 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: Quick Start
+description: Create your first physics simulation with JoltC in minutes
 ---
 
-## Get started in three steps
+## Overview
 
-Get your documentation site running locally and make your first customization.
+This guide walks you through creating a simple physics simulation where a sphere falls under gravity and bounces on a floor. We'll cover:
 
-### Step 1: Set up your local environment
+- Initializing the physics system
+- Creating collision layers
+- Adding rigid bodies (floor and sphere)
+- Running the simulation loop
+- Cleaning up resources
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+<Tip>
+This quick start is based on the official HelloWorld sample from the JoltC repository.
+</Tip>
 
-### Step 2: Deploy your changes
+## Complete Example
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+Here's a complete working program that simulates a falling sphere:
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+```c main.c
+#include <joltc.h>
+#include <stdio.h>
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+// Define object layers - we use two: one for static and one for dynamic objects
+typedef enum {
+    LAYER_NON_MOVING = 0,
+    LAYER_MOVING = 1,
+    NUM_LAYERS = 2
+} ObjectLayers;
 
-### Step 3: Go live
+// Define broad phase layers - these match our object layers 1:1
+typedef enum {
+    BP_LAYER_NON_MOVING = 0,
+    BP_LAYER_MOVING = 1,
+    NUM_BP_LAYERS = 2
+} BroadPhaseLayers;
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+int main(void) {
+    // Initialize Jolt
+    if (!JPH_Init()) {
+        printf("Failed to initialize JoltC\n");
+        return 1;
+    }
 
-## Next steps
+    // Create job system for multi-threading (pass NULL for default configuration)
+    JPH_JobSystem* jobSystem = JPH_JobSystemThreadPool_Create(NULL);
 
-Now that you have your docs running, explore these key features:
+    // Setup collision filtering
+    // We use a simple table that allows moving objects to collide with non-moving objects
+    JPH_ObjectLayerPairFilter* objectLayerPairFilter = JPH_ObjectLayerPairFilterTable_Create(NUM_LAYERS);
+    JPH_ObjectLayerPairFilterTable_EnableCollision(objectLayerPairFilter, LAYER_NON_MOVING, LAYER_MOVING);
+    JPH_ObjectLayerPairFilterTable_EnableCollision(objectLayerPairFilter, LAYER_MOVING, LAYER_NON_MOVING);
 
-<CardGroup cols={2}>
+    // Map object layers to broad phase layers (1:1 mapping)
+    JPH_BroadPhaseLayerInterface* broadPhaseLayerInterface = JPH_BroadPhaseLayerInterfaceTable_Create(NUM_LAYERS, NUM_BP_LAYERS);
+    JPH_BroadPhaseLayerInterfaceTable_MapObjectToBroadPhaseLayer(broadPhaseLayerInterface, LAYER_NON_MOVING, BP_LAYER_NON_MOVING);
+    JPH_BroadPhaseLayerInterfaceTable_MapObjectToBroadPhaseLayer(broadPhaseLayerInterface, LAYER_MOVING, BP_LAYER_MOVING);
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
-</Card>
+    // Create object vs broad phase layer filter
+    JPH_ObjectVsBroadPhaseLayerFilter* objectVsBroadPhaseLayerFilter = 
+        JPH_ObjectVsBroadPhaseLayerFilterTable_Create(broadPhaseLayerInterface, NUM_BP_LAYERS, objectLayerPairFilter, NUM_LAYERS);
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
-</Card>
+    // Create the physics system
+    JPH_PhysicsSystemSettings systemSettings;
+    systemSettings.maxBodies = 1024;
+    systemSettings.numBodyMutexes = 0;  // 0 = auto-detect
+    systemSettings.maxBodyPairs = 1024;
+    systemSettings.maxContactConstraints = 1024;
+    systemSettings.broadPhaseLayerInterface = broadPhaseLayerInterface;
+    systemSettings.objectLayerPairFilter = objectLayerPairFilter;
+    systemSettings.objectVsBroadPhaseLayerFilter = objectVsBroadPhaseLayerFilter;
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
-</Card>
+    JPH_PhysicsSystem* physicsSystem = JPH_PhysicsSystem_Create(&systemSettings);
+    JPH_BodyInterface* bodyInterface = JPH_PhysicsSystem_GetBodyInterface(physicsSystem);
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
-</Card>
+    // Create the floor (static box)
+    JPH_BodyID floorId;
+    {
+        JPH_Vec3 boxHalfExtent = { 100.0f, 1.0f, 100.0f };
+        JPH_BoxShape* boxShape = JPH_BoxShape_Create(&boxHalfExtent, JPH_DEFAULT_CONVEX_RADIUS);
 
-</CardGroup>
+        JPH_RVec3 position = { 0.0f, -1.0f, 0.0f };
+        JPH_BodyCreationSettings* floorSettings = JPH_BodyCreationSettings_Create3(
+            (const JPH_Shape*)boxShape,
+            &position,
+            NULL,  // rotation (NULL = identity/no rotation)
+            JPH_MotionType_Static,
+            LAYER_NON_MOVING
+        );
+
+        floorId = JPH_BodyInterface_CreateAndAddBody(bodyInterface, floorSettings, JPH_Activation_DontActivate);
+        
+        JPH_BodyCreationSettings_Destroy(floorSettings);
+        JPH_Shape_Destroy((JPH_Shape*)boxShape);
+    }
+
+    // Create the sphere (dynamic)
+    JPH_BodyID sphereId;
+    {
+        JPH_SphereShape* sphereShape = JPH_SphereShape_Create(0.5f);
+
+        JPH_RVec3 position = { 0.0f, 2.0f, 0.0f };
+        JPH_BodyCreationSettings* sphereSettings = JPH_BodyCreationSettings_Create3(
+            (const JPH_Shape*)sphereShape,
+            &position,
+            NULL,  // rotation
+            JPH_MotionType_Dynamic,
+            LAYER_MOVING
+        );
+
+        sphereId = JPH_BodyInterface_CreateAndAddBody(bodyInterface, sphereSettings, JPH_Activation_Activate);
+        
+        JPH_BodyCreationSettings_Destroy(sphereSettings);
+        JPH_Shape_Destroy((JPH_Shape*)sphereShape);
+    }
+
+    // Give the sphere an initial downward velocity
+    JPH_Vec3 initialVelocity = { 0.0f, -5.0f, 0.0f };
+    JPH_BodyInterface_SetLinearVelocity(bodyInterface, sphereId, &initialVelocity);
+
+    // Optional: Optimize broad phase before simulation
+    JPH_PhysicsSystem_OptimizeBroadPhase(physicsSystem);
+
+    // Simulation parameters
+    const float deltaTime = 1.0f / 60.0f;  // 60 Hz
+    const int collisionSteps = 1;
+
+    printf("Starting simulation...\n");
+
+    // Run simulation until the sphere falls asleep (stops moving)
+    uint32_t step = 0;
+    while (JPH_BodyInterface_IsActive(bodyInterface, sphereId)) {
+        step++;
+
+        // Get and print sphere position and velocity
+        JPH_RVec3 position;
+        JPH_Vec3 velocity;
+        JPH_BodyInterface_GetCenterOfMassPosition(bodyInterface, sphereId, &position);
+        JPH_BodyInterface_GetLinearVelocity(bodyInterface, sphereId, &velocity);
+
+        printf("Step %u: Position = (%.2f, %.2f, %.2f), Velocity = (%.2f, %.2f, %.2f)\n",
+               step, position.x, position.y, position.z, velocity.x, velocity.y, velocity.z);
+
+        // Step the physics simulation
+        JPH_PhysicsSystem_Update(physicsSystem, deltaTime, collisionSteps, jobSystem);
+    }
+
+    printf("Sphere has come to rest after %u steps\n", step);
+
+    // Cleanup
+    JPH_BodyInterface_RemoveAndDestroyBody(bodyInterface, sphereId);
+    JPH_BodyInterface_RemoveAndDestroyBody(bodyInterface, floorId);
+    JPH_PhysicsSystem_Destroy(physicsSystem);
+    JPH_JobSystem_Destroy(jobSystem);
+    JPH_Shutdown();
+
+    return 0;
+}
+```
+
+## Building and Running
+
+Compile the program:
+
+<CodeGroup>
+```bash GCC/Clang
+gcc main.c -I/path/to/joltc/include -L/path/to/joltc/lib -ljoltc -lstdc++ -lm -o quickstart
+./quickstart
+```
+
+```bash MSVC
+cl main.c /I"path\to\joltc\include" /link joltc.lib
+quickstart.exe
+```
+
+```bash CMake
+# CMakeLists.txt
+add_executable(quickstart main.c)
+target_link_libraries(quickstart PRIVATE joltc)
+```
+</CodeGroup>
+
+Expected output:
+```
+Starting simulation...
+Step 1: Position = (0.00, 1.92, 0.00), Velocity = (0.00, -5.16, 0.00)
+Step 2: Position = (0.00, 1.83, 0.00), Velocity = (0.00, -5.33, 0.00)
+...
+Step 45: Position = (0.00, 0.50, 0.00), Velocity = (0.00, -0.01, 0.00)
+Sphere has come to rest after 45 steps
+```
+
+## Step-by-Step Breakdown
+
+### 1. Initialize JoltC
+
+```c
+if (!JPH_Init()) {
+    printf("Failed to initialize JoltC\n");
+    return 1;
+}
+```
+
+The `JPH_Init()` function must be called before any other JoltC functions. It initializes the physics engine's internal state.
+
+<Warning>
+Always check the return value of `JPH_Init()`. If it returns `false`, the library failed to initialize and should not be used.
+</Warning>
+
+### 2. Create a Job System
+
+```c
+JPH_JobSystem* jobSystem = JPH_JobSystemThreadPool_Create(NULL);
+```
+
+The job system manages multi-threaded execution of physics tasks. Pass `NULL` to use default settings (auto-detects thread count).
+
+For custom configuration:
+
+```c
+JobSystemThreadPoolConfig config;
+config.maxJobs = 2048;
+config.maxBarriers = 8;
+config.numThreads = 4;  // or -1 for auto-detect
+
+JPH_JobSystem* jobSystem = JPH_JobSystemThreadPool_Create(&config);
+```
+
+### 3. Set Up Collision Layers
+
+JoltC uses a two-level filtering system:
+
+**Object Layers** - Fine-grained collision filtering (which specific objects collide)  
+**Broad Phase Layers** - Coarse spatial partitioning (for broad phase optimization)
+
+```c
+// Create collision filter table
+JPH_ObjectLayerPairFilter* filter = JPH_ObjectLayerPairFilterTable_Create(NUM_LAYERS);
+
+// Enable collisions between static and dynamic objects
+JPH_ObjectLayerPairFilterTable_EnableCollision(filter, LAYER_NON_MOVING, LAYER_MOVING);
+```
 
 <Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
+By default, all layer pairs are disabled. You must explicitly enable the collision pairs you want.
 </Note>
+
+### 4. Create the Physics System
+
+```c
+JPH_PhysicsSystemSettings systemSettings;
+systemSettings.maxBodies = 1024;
+systemSettings.numBodyMutexes = 0;  // 0 = auto-detect
+systemSettings.maxBodyPairs = 1024;
+systemSettings.maxContactConstraints = 1024;
+systemSettings.broadPhaseLayerInterface = broadPhaseLayerInterface;
+systemSettings.objectLayerPairFilter = objectLayerPairFilter;
+systemSettings.objectVsBroadPhaseLayerFilter = objectVsBroadPhaseLayerFilter;
+
+JPH_PhysicsSystem* physicsSystem = JPH_PhysicsSystem_Create(&systemSettings);
+```
+
+Key settings:
+- `maxBodies` - Maximum number of rigid bodies in the simulation
+- `maxBodyPairs` - Maximum number of body pairs that can collide
+- `maxContactConstraints` - Maximum number of contact points
+
+### 5. Create Bodies
+
+#### Static Floor
+
+```c
+// Create box shape
+JPH_Vec3 boxHalfExtent = { 100.0f, 1.0f, 100.0f };
+JPH_BoxShape* boxShape = JPH_BoxShape_Create(&boxHalfExtent, JPH_DEFAULT_CONVEX_RADIUS);
+
+// Create body at position
+JPH_RVec3 position = { 0.0f, -1.0f, 0.0f };
+JPH_BodyCreationSettings* settings = JPH_BodyCreationSettings_Create3(
+    (const JPH_Shape*)boxShape,
+    &position,
+    NULL,  // rotation (NULL = identity)
+    JPH_MotionType_Static,  // Static body (won't move)
+    LAYER_NON_MOVING
+);
+
+JPH_BodyID floorId = JPH_BodyInterface_CreateAndAddBody(
+    bodyInterface, 
+    settings, 
+    JPH_Activation_DontActivate  // Static bodies don't need activation
+);
+```
+
+#### Dynamic Sphere
+
+```c
+JPH_SphereShape* sphereShape = JPH_SphereShape_Create(0.5f);
+
+JPH_RVec3 position = { 0.0f, 2.0f, 0.0f };
+JPH_BodyCreationSettings* settings = JPH_BodyCreationSettings_Create3(
+    (const JPH_Shape*)sphereShape,
+    &position,
+    NULL,
+    JPH_MotionType_Dynamic,  // Dynamic body (simulated)
+    LAYER_MOVING
+);
+
+JPH_BodyID sphereId = JPH_BodyInterface_CreateAndAddBody(
+    bodyInterface,
+    settings,
+    JPH_Activation_Activate  // Activate immediately
+);
+```
+
+<Tip>
+Always destroy `JPH_BodyCreationSettings` and shapes after creating the body to avoid memory leaks.
+</Tip>
+
+### 6. Set Initial Velocity
+
+```c
+JPH_Vec3 initialVelocity = { 0.0f, -5.0f, 0.0f };
+JPH_BodyInterface_SetLinearVelocity(bodyInterface, sphereId, &initialVelocity);
+```
+
+You can also set angular velocity, apply forces, or apply impulses:
+
+```c
+// Apply force (continuous)
+JPH_Vec3 force = { 0.0f, 10.0f, 0.0f };
+JPH_BodyInterface_AddForce(bodyInterface, sphereId, &force);
+
+// Apply impulse (instantaneous)
+JPH_Vec3 impulse = { 0.0f, 5.0f, 0.0f };
+JPH_BodyInterface_AddImpulse(bodyInterface, sphereId, &impulse);
+```
+
+### 7. Run the Simulation Loop
+
+```c
+const float deltaTime = 1.0f / 60.0f;  // 60 Hz timestep
+const int collisionSteps = 1;
+
+while (JPH_BodyInterface_IsActive(bodyInterface, sphereId)) {
+    // Query body state
+    JPH_RVec3 position;
+    JPH_Vec3 velocity;
+    JPH_BodyInterface_GetCenterOfMassPosition(bodyInterface, sphereId, &position);
+    JPH_BodyInterface_GetLinearVelocity(bodyInterface, sphereId, &velocity);
+
+    // Step simulation forward
+    JPH_PhysicsSystem_Update(physicsSystem, deltaTime, collisionSteps, jobSystem);
+}
+```
+
+<Note>
+For timesteps larger than 1/60th of a second, increase `collisionSteps` proportionally to maintain stability. For example, use `collisionSteps = 2` for 1/30th second timesteps.
+</Note>
+
+### 8. Clean Up Resources
+
+```c
+// Remove and destroy bodies
+JPH_BodyInterface_RemoveAndDestroyBody(bodyInterface, sphereId);
+JPH_BodyInterface_RemoveAndDestroyBody(bodyInterface, floorId);
+
+// Destroy physics system (also destroys body interface)
+JPH_PhysicsSystem_Destroy(physicsSystem);
+
+// Destroy job system
+JPH_JobSystem_Destroy(jobSystem);
+
+// Shutdown JoltC
+JPH_Shutdown();
+```
+
+<Warning>
+Always call `JPH_Shutdown()` when you're done with JoltC to properly release all resources.
+</Warning>
+
+## Common Patterns
+
+### Setting Gravity
+
+```c
+JPH_Vec3 gravity = { 0.0f, -9.81f, 0.0f };  // Earth gravity
+JPH_PhysicsSystem_SetGravity(physicsSystem, &gravity);
+```
+
+### Creating Shapes
+
+<CodeGroup>
+```c Sphere
+JPH_SphereShape* sphere = JPH_SphereShape_Create(radius);
+```
+
+```c Box
+JPH_Vec3 halfExtent = { width/2, height/2, depth/2 };
+JPH_BoxShape* box = JPH_BoxShape_Create(&halfExtent, JPH_DEFAULT_CONVEX_RADIUS);
+```
+
+```c Capsule
+// Half height of cylindrical portion, radius of sphere caps
+JPH_CapsuleShape* capsule = JPH_CapsuleShape_Create(halfHeight, radius);
+```
+
+```c Cylinder
+JPH_CylinderShape* cylinder = JPH_CylinderShape_Create(halfHeight, radius);
+```
+</CodeGroup>
+
+### Querying Body Properties
+
+```c
+// Position
+JPH_RVec3 position;
+JPH_BodyInterface_GetPosition(bodyInterface, bodyId, &position);
+
+// Rotation
+JPH_Quat rotation;
+JPH_BodyInterface_GetRotation(bodyInterface, bodyId, &rotation);
+
+// Velocity
+JPH_Vec3 linearVel, angularVel;
+JPH_BodyInterface_GetLinearVelocity(bodyInterface, bodyId, &linearVel);
+JPH_BodyInterface_GetAngularVelocity(bodyInterface, bodyId, &angularVel);
+
+// Check if active
+bool isActive = JPH_BodyInterface_IsActive(bodyInterface, bodyId);
+```
+
+### Setting Body Properties
+
+```c
+// Set friction (0.0 = no friction, 1.0 = high friction)
+JPH_BodyInterface_SetFriction(bodyInterface, bodyId, 0.5f);
+
+// Set restitution/bounciness (0.0 = no bounce, 1.0 = perfect bounce)
+JPH_BodyInterface_SetRestitution(bodyInterface, bodyId, 0.8f);
+
+// Set linear damping (air resistance)
+JPH_BodyInterface_SetLinearDamping(bodyInterface, bodyId, 0.05f);
+
+// Set angular damping (rotational air resistance)  
+JPH_BodyInterface_SetAngularDamping(bodyInterface, bodyId, 0.05f);
+```
+
+## Next Steps
+
+<Steps>
+  <Step title="Explore the Core API">
+    Learn about the physics system, bodies, and shapes in detail.
+    
+    [Read Core Concepts →](/core/physics-system)
+  </Step>
+  
+  <Step title="Add Constraints">
+    Connect bodies with joints and constraints.
+    
+    [Learn About Constraints →](/guides/constraints)
+  </Step>
+  
+  <Step title="Browse API Reference">
+    Explore the complete API documentation.
+    
+    [View API Reference →](/api/initialization)
+  </Step>
+</Steps>

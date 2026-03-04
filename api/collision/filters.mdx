@@ -1,0 +1,532 @@
+---
+title: Collision Filters
+description: Layer interfaces and filters for collision detection control
+---
+
+## Overview
+
+Collision filters control which objects can collide with each other in JoltC. The system uses a two-tier filtering approach:
+
+1. **Broad Phase Layers** - Coarse filtering for performance
+2. **Object Layers** - Fine-grained collision control
+
+## Broad Phase Layer Interface
+
+The broad phase layer interface maps object layers to broad phase layers.
+
+### Create Mask Interface
+
+<CodeGroup>
+```c JPH_BroadPhaseLayerInterfaceMask_Create
+JPH_BroadPhaseLayerInterface* JPH_BroadPhaseLayerInterfaceMask_Create(
+    uint32_t numBroadPhaseLayers
+);
+```
+</CodeGroup>
+
+Create a mask-based broad phase layer interface.
+
+<ParamField path="numBroadPhaseLayers" type="uint32_t">
+  Number of broad phase layers (maximum 32)
+</ParamField>
+
+<ResponseField name="return" type="JPH_BroadPhaseLayerInterface*">
+  Pointer to the created interface
+</ResponseField>
+
+### Configure Layer (Mask)
+
+<CodeGroup>
+```c JPH_BroadPhaseLayerInterfaceMask_ConfigureLayer
+void JPH_BroadPhaseLayerInterfaceMask_ConfigureLayer(
+    JPH_BroadPhaseLayerInterface* bpInterface,
+    JPH_BroadPhaseLayer broadPhaseLayer,
+    uint32_t groupsToInclude,
+    uint32_t groupsToExclude
+);
+```
+</CodeGroup>
+
+Configure which groups a broad phase layer should collide with.
+
+<ParamField path="bpInterface" type="JPH_BroadPhaseLayerInterface*">
+  The broad phase layer interface
+</ParamField>
+
+<ParamField path="broadPhaseLayer" type="JPH_BroadPhaseLayer">
+  The broad phase layer to configure (0-31)
+</ParamField>
+
+<ParamField path="groupsToInclude" type="uint32_t">
+  Bitmask of groups this layer should collide with
+</ParamField>
+
+<ParamField path="groupsToExclude" type="uint32_t">
+  Bitmask of groups to exclude from collision
+</ParamField>
+
+### Create Table Interface
+
+<CodeGroup>
+```c JPH_BroadPhaseLayerInterfaceTable_Create
+JPH_BroadPhaseLayerInterface* JPH_BroadPhaseLayerInterfaceTable_Create(
+    uint32_t numObjectLayers,
+    uint32_t numBroadPhaseLayers
+);
+```
+</CodeGroup>
+
+Create a table-based broad phase layer interface.
+
+<ParamField path="numObjectLayers" type="uint32_t">
+  Number of object layers
+</ParamField>
+
+<ParamField path="numBroadPhaseLayers" type="uint32_t">
+  Number of broad phase layers
+</ParamField>
+
+### Map Object to Broad Phase Layer
+
+<CodeGroup>
+```c JPH_BroadPhaseLayerInterfaceTable_MapObjectToBroadPhaseLayer
+void JPH_BroadPhaseLayerInterfaceTable_MapObjectToBroadPhaseLayer(
+    JPH_BroadPhaseLayerInterface* bpInterface,
+    JPH_ObjectLayer objectLayer,
+    JPH_BroadPhaseLayer broadPhaseLayer
+);
+```
+</CodeGroup>
+
+Map an object layer to a broad phase layer.
+
+<ParamField path="objectLayer" type="JPH_ObjectLayer">
+  The object layer to map
+</ParamField>
+
+<ParamField path="broadPhaseLayer" type="JPH_BroadPhaseLayer">
+  The broad phase layer to map to
+</ParamField>
+
+## Object Layer Pair Filter
+
+Determines if two object layers can collide.
+
+### Create Mask Filter
+
+<CodeGroup>
+```c JPH_ObjectLayerPairFilterMask_Create
+JPH_ObjectLayerPairFilter* JPH_ObjectLayerPairFilterMask_Create(void);
+```
+</CodeGroup>
+
+Create a mask-based object layer pair filter.
+
+### Get Object Layer (Mask)
+
+<CodeGroup>
+```c JPH_ObjectLayerPairFilterMask_GetObjectLayer
+JPH_ObjectLayer JPH_ObjectLayerPairFilterMask_GetObjectLayer(
+    uint32_t group,
+    uint32_t mask
+);
+```
+</CodeGroup>
+
+Get object layer from group and mask.
+
+<ParamField path="group" type="uint32_t">
+  Collision group (0-31)
+</ParamField>
+
+<ParamField path="mask" type="uint32_t">
+  Collision mask bitmask
+</ParamField>
+
+### Get Group/Mask from Layer
+
+<CodeGroup>
+```c JPH_ObjectLayerPairFilterMask_GetGroup
+uint32_t JPH_ObjectLayerPairFilterMask_GetGroup(JPH_ObjectLayer layer);
+```
+</CodeGroup>
+
+Extract the group from an object layer.
+
+<CodeGroup>
+```c JPH_ObjectLayerPairFilterMask_GetMask
+uint32_t JPH_ObjectLayerPairFilterMask_GetMask(JPH_ObjectLayer layer);
+```
+</CodeGroup>
+
+Extract the mask from an object layer.
+
+### Create Table Filter
+
+<CodeGroup>
+```c JPH_ObjectLayerPairFilterTable_Create
+JPH_ObjectLayerPairFilter* JPH_ObjectLayerPairFilterTable_Create(
+    uint32_t numObjectLayers
+);
+```
+</CodeGroup>
+
+Create a table-based object layer pair filter.
+
+<ParamField path="numObjectLayers" type="uint32_t">
+  Number of object layers
+</ParamField>
+
+### Enable/Disable Collision
+
+<CodeGroup>
+```c JPH_ObjectLayerPairFilterTable_EnableCollision
+void JPH_ObjectLayerPairFilterTable_EnableCollision(
+    JPH_ObjectLayerPairFilter* objectFilter,
+    JPH_ObjectLayer layer1,
+    JPH_ObjectLayer layer2
+);
+```
+</CodeGroup>
+
+Enable collision between two object layers.
+
+<CodeGroup>
+```c JPH_ObjectLayerPairFilterTable_DisableCollision
+void JPH_ObjectLayerPairFilterTable_DisableCollision(
+    JPH_ObjectLayerPairFilter* objectFilter,
+    JPH_ObjectLayer layer1,
+    JPH_ObjectLayer layer2
+);
+```
+</CodeGroup>
+
+Disable collision between two object layers.
+
+### Check Should Collide
+
+<CodeGroup>
+```c JPH_ObjectLayerPairFilterTable_ShouldCollide
+bool JPH_ObjectLayerPairFilterTable_ShouldCollide(
+    JPH_ObjectLayerPairFilter* objectFilter,
+    JPH_ObjectLayer layer1,
+    JPH_ObjectLayer layer2
+);
+```
+</CodeGroup>
+
+Check if two object layers can collide.
+
+## Object vs Broad Phase Layer Filter
+
+Determines if an object layer can collide with a broad phase layer.
+
+### Create Mask Filter
+
+<CodeGroup>
+```c JPH_ObjectVsBroadPhaseLayerFilterMask_Create
+JPH_ObjectVsBroadPhaseLayerFilter* JPH_ObjectVsBroadPhaseLayerFilterMask_Create(
+    const JPH_BroadPhaseLayerInterface* broadPhaseLayerInterface
+);
+```
+</CodeGroup>
+
+Create a mask-based filter.
+
+<ParamField path="broadPhaseLayerInterface" type="const JPH_BroadPhaseLayerInterface*">
+  The broad phase layer interface to use
+</ParamField>
+
+### Create Table Filter
+
+<CodeGroup>
+```c JPH_ObjectVsBroadPhaseLayerFilterTable_Create
+JPH_ObjectVsBroadPhaseLayerFilter* JPH_ObjectVsBroadPhaseLayerFilterTable_Create(
+    JPH_BroadPhaseLayerInterface* broadPhaseLayerInterface,
+    uint32_t numBroadPhaseLayers,
+    JPH_ObjectLayerPairFilter* objectLayerPairFilter,
+    uint32_t numObjectLayers
+);
+```
+</CodeGroup>
+
+Create a table-based filter.
+
+<ParamField path="numBroadPhaseLayers" type="uint32_t">
+  Number of broad phase layers
+</ParamField>
+
+<ParamField path="objectLayerPairFilter" type="JPH_ObjectLayerPairFilter*">
+  The object layer pair filter
+</ParamField>
+
+<ParamField path="numObjectLayers" type="uint32_t">
+  Number of object layers
+</ParamField>
+
+## Custom Filters
+
+You can create custom filters for queries using callback functions.
+
+### Broad Phase Layer Filter
+
+<CodeGroup>
+```c Create Custom Filter
+typedef struct JPH_BroadPhaseLayerFilter_Procs {
+    bool (*ShouldCollide)(void* userData, JPH_BroadPhaseLayer layer);
+} JPH_BroadPhaseLayerFilter_Procs;
+
+void JPH_BroadPhaseLayerFilter_SetProcs(
+    const JPH_BroadPhaseLayerFilter_Procs* procs
+);
+
+JPH_BroadPhaseLayerFilter* JPH_BroadPhaseLayerFilter_Create(void* userData);
+void JPH_BroadPhaseLayerFilter_Destroy(JPH_BroadPhaseLayerFilter* filter);
+```
+</CodeGroup>
+
+<ParamField path="ShouldCollide" type="callback">
+  Called to determine if a broad phase layer should be tested.
+  
+  **Parameters:**
+  - `userData` - User data passed during filter creation
+  - `layer` - The broad phase layer to test
+  
+  **Returns:** `true` if the layer should be tested
+</ParamField>
+
+### Object Layer Filter
+
+<CodeGroup>
+```c Create Custom Filter
+typedef struct JPH_ObjectLayerFilter_Procs {
+    bool (*ShouldCollide)(void* userData, JPH_ObjectLayer layer);
+} JPH_ObjectLayerFilter_Procs;
+
+void JPH_ObjectLayerFilter_SetProcs(
+    const JPH_ObjectLayerFilter_Procs* procs
+);
+
+JPH_ObjectLayerFilter* JPH_ObjectLayerFilter_Create(void* userData);
+void JPH_ObjectLayerFilter_Destroy(JPH_ObjectLayerFilter* filter);
+```
+</CodeGroup>
+
+<ParamField path="ShouldCollide" type="callback">
+  Called to determine if an object layer should be tested.
+</ParamField>
+
+### Body Filter
+
+<CodeGroup>
+```c Create Custom Filter
+typedef struct JPH_BodyFilter_Procs {
+    bool (*ShouldCollide)(void* userData, JPH_BodyID bodyID);
+    bool (*ShouldCollideLocked)(void* userData, const JPH_Body* body);
+} JPH_BodyFilter_Procs;
+
+void JPH_BodyFilter_SetProcs(const JPH_BodyFilter_Procs* procs);
+
+JPH_BodyFilter* JPH_BodyFilter_Create(void* userData);
+void JPH_BodyFilter_Destroy(JPH_BodyFilter* filter);
+```
+</CodeGroup>
+
+<ParamField path="ShouldCollide" type="callback">
+  Called when body is not locked. Should return quickly.
+  
+  **Parameters:**
+  - `userData` - User data
+  - `bodyID` - The body ID to test
+</ParamField>
+
+<ParamField path="ShouldCollideLocked" type="callback">
+  Called when body is locked. Can access full body information.
+  
+  **Parameters:**
+  - `userData` - User data
+  - `body` - The locked body to test
+</ParamField>
+
+### Shape Filter
+
+<CodeGroup>
+```c Create Custom Filter
+typedef struct JPH_ShapeFilter_Procs {
+    bool (*ShouldCollide)(
+        void* userData,
+        const JPH_Shape* shape2,
+        const JPH_SubShapeID* subShapeIDOfShape2
+    );
+    
+    bool (*ShouldCollide2)(
+        void* userData,
+        const JPH_Shape* shape1,
+        const JPH_SubShapeID* subShapeIDOfShape1,
+        const JPH_Shape* shape2,
+        const JPH_SubShapeID* subShapeIDOfShape2
+    );
+} JPH_ShapeFilter_Procs;
+
+void JPH_ShapeFilter_SetProcs(const JPH_ShapeFilter_Procs* procs);
+
+JPH_ShapeFilter* JPH_ShapeFilter_Create(void* userData);
+void JPH_ShapeFilter_Destroy(JPH_ShapeFilter* filter);
+
+JPH_BodyID JPH_ShapeFilter_GetBodyID2(JPH_ShapeFilter* filter);
+void JPH_ShapeFilter_SetBodyID2(JPH_ShapeFilter* filter, JPH_BodyID id);
+```
+</CodeGroup>
+
+<ParamField path="ShouldCollide" type="callback">
+  Simple filter that only checks shape2.
+</ParamField>
+
+<ParamField path="ShouldCollide2" type="callback">
+  Advanced filter that checks both shapes and their sub-shapes.
+</ParamField>
+
+### Simulation Shape Filter
+
+<CodeGroup>
+```c Create Simulation Filter
+typedef struct JPH_SimShapeFilter_Procs {
+    bool (*ShouldCollide)(
+        void* userData,
+        const JPH_Body* body1,
+        const JPH_Shape* shape1,
+        const JPH_SubShapeID* subShapeIDOfShape1,
+        const JPH_Body* body2,
+        const JPH_Shape* shape2,
+        const JPH_SubShapeID* subShapeIDOfShape2
+    );
+} JPH_SimShapeFilter_Procs;
+
+void JPH_SimShapeFilter_SetProcs(const JPH_SimShapeFilter_Procs* procs);
+
+JPH_SimShapeFilter* JPH_SimShapeFilter_Create(void* userData);
+void JPH_SimShapeFilter_Destroy(JPH_SimShapeFilter* filter);
+```
+</CodeGroup>
+
+Set on the physics system to filter collisions during simulation.
+
+<CodeGroup>
+```c Set on Physics System
+void JPH_PhysicsSystem_SetSimShapeFilter(
+    JPH_PhysicsSystem* system,
+    const JPH_SimShapeFilter* filter
+);
+```
+</CodeGroup>
+
+## Example Usage
+
+<CodeGroup>
+```c Table-Based Filtering
+// Define layers
+#define LAYER_STATIC 0
+#define LAYER_MOVING 1
+#define LAYER_DEBRIS 2
+
+#define BP_LAYER_NON_MOVING 0
+#define BP_LAYER_MOVING 1
+
+// Create broad phase interface
+JPH_BroadPhaseLayerInterface* bp_interface =
+    JPH_BroadPhaseLayerInterfaceTable_Create(3, 2);
+
+JPH_BroadPhaseLayerInterfaceTable_MapObjectToBroadPhaseLayer(
+    bp_interface, LAYER_STATIC, BP_LAYER_NON_MOVING);
+JPH_BroadPhaseLayerInterfaceTable_MapObjectToBroadPhaseLayer(
+    bp_interface, LAYER_MOVING, BP_LAYER_MOVING);
+JPH_BroadPhaseLayerInterfaceTable_MapObjectToBroadPhaseLayer(
+    bp_interface, LAYER_DEBRIS, BP_LAYER_MOVING);
+
+// Create object layer filter
+JPH_ObjectLayerPairFilter* obj_filter =
+    JPH_ObjectLayerPairFilterTable_Create(3);
+
+// Static doesn't collide with static
+JPH_ObjectLayerPairFilterTable_DisableCollision(
+    obj_filter, LAYER_STATIC, LAYER_STATIC);
+
+// Everything else collides
+JPH_ObjectLayerPairFilterTable_EnableCollision(
+    obj_filter, LAYER_STATIC, LAYER_MOVING);
+JPH_ObjectLayerPairFilterTable_EnableCollision(
+    obj_filter, LAYER_STATIC, LAYER_DEBRIS);
+JPH_ObjectLayerPairFilterTable_EnableCollision(
+    obj_filter, LAYER_MOVING, LAYER_MOVING);
+JPH_ObjectLayerPairFilterTable_EnableCollision(
+    obj_filter, LAYER_MOVING, LAYER_DEBRIS);
+JPH_ObjectLayerPairFilterTable_EnableCollision(
+    obj_filter, LAYER_DEBRIS, LAYER_DEBRIS);
+
+// Create object vs broad phase filter
+JPH_ObjectVsBroadPhaseLayerFilter* obj_vs_bp_filter =
+    JPH_ObjectVsBroadPhaseLayerFilterTable_Create(
+        bp_interface, 2, obj_filter, 3);
+```
+
+```c Mask-Based Filtering
+// Define groups
+#define GROUP_STATIC 0
+#define GROUP_DYNAMIC 1
+#define GROUP_SENSOR 2
+
+// Create mask-based filters
+JPH_ObjectLayerPairFilter* obj_filter =
+    JPH_ObjectLayerPairFilterMask_Create();
+
+// Create layers with collision masks
+JPH_ObjectLayer static_layer =
+    JPH_ObjectLayerPairFilterMask_GetObjectLayer(
+        GROUP_STATIC,
+        (1 << GROUP_DYNAMIC) | (1 << GROUP_SENSOR)
+    );
+
+JPH_ObjectLayer dynamic_layer =
+    JPH_ObjectLayerPairFilterMask_GetObjectLayer(
+        GROUP_DYNAMIC,
+        (1 << GROUP_STATIC) | (1 << GROUP_DYNAMIC)
+    );
+
+JPH_ObjectLayer sensor_layer =
+    JPH_ObjectLayerPairFilterMask_GetObjectLayer(
+        GROUP_SENSOR,
+        (1 << GROUP_STATIC) | (1 << GROUP_DYNAMIC)
+    );
+```
+
+```c Custom Body Filter
+bool my_body_filter(void* userData, JPH_BodyID bodyID) {
+    // Filter out specific bodies
+    JPH_BodyID* ignore_id = (JPH_BodyID*)userData;
+    return bodyID != *ignore_id;
+}
+
+JPH_BodyFilter_Procs procs = {
+    .ShouldCollide = my_body_filter,
+    .ShouldCollideLocked = NULL
+};
+
+JPH_BodyFilter_SetProcs(&procs);
+
+JPH_BodyID ignore_body = 42;
+JPH_BodyFilter* filter = JPH_BodyFilter_Create(&ignore_body);
+
+// Use in raycast
+JPH_RayCastResult hit;
+JPH_NarrowPhaseQuery_CastRay(query, &origin, &direction, &hit,
+    NULL, NULL, filter);
+
+JPH_BodyFilter_Destroy(filter);
+```
+</CodeGroup>
+
+## See Also
+
+- [Collision Queries](/api/collision/queries) - Raycasting and collision detection
+- [Contact Listeners](/api/collision/listeners) - Collision event callbacks
+- [Physics System](/api/physics-system) - Physics system setup

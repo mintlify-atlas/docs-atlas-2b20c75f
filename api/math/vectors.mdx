@@ -1,0 +1,427 @@
+---
+title: 'Vectors'
+description: 'Vector math operations for 3D and 4D vectors'
+---
+
+JoltC provides vector types and operations for 3D graphics and physics calculations.
+
+## Types
+
+### JPH_Vec3
+
+3-component vector with single-precision floating point.
+
+```c
+typedef struct JPH_Vec3 {
+    float x;
+    float y;
+    float z;
+} JPH_Vec3;
+```
+
+### JPH_Vec4
+
+4-component vector with single-precision floating point.
+
+```c
+typedef struct JPH_Vec4 {
+    float x;
+    float y;
+    float z;
+    float w;
+} JPH_Vec4;
+```
+
+### JPH_RVec3
+
+Real-precision 3D vector. In single-precision builds, this is the same as `JPH_Vec3`. In double-precision builds (`JPH_DOUBLE_PRECISION`), this uses double-precision components.
+
+```c
+#if defined(JPH_DOUBLE_PRECISION)
+typedef struct JPH_RVec3 {
+    double x;
+    double y;
+    double z;
+} JPH_RVec3;
+#else
+typedef JPH_Vec3 JPH_RVec3;
+#endif
+```
+
+## Constants
+
+### Axis Vectors
+
+#### JPH_Vec3_AxisX
+
+```c
+void JPH_Vec3_AxisX(JPH_Vec3* result)
+```
+
+Get the X-axis unit vector (1, 0, 0).
+
+#### JPH_Vec3_AxisY
+
+```c
+void JPH_Vec3_AxisY(JPH_Vec3* result)
+```
+
+Get the Y-axis unit vector (0, 1, 0).
+
+#### JPH_Vec3_AxisZ
+
+```c
+void JPH_Vec3_AxisZ(JPH_Vec3* result)
+```
+
+Get the Z-axis unit vector (0, 0, 1).
+
+## Vector Operations
+
+### Arithmetic
+
+#### JPH_Vec3_Add
+
+```c
+void JPH_Vec3_Add(const JPH_Vec3* v1, const JPH_Vec3* v2, JPH_Vec3* result)
+```
+
+Add two vectors component-wise.
+
+```c
+JPH_Vec3 a = { 1.0f, 2.0f, 3.0f };
+JPH_Vec3 b = { 4.0f, 5.0f, 6.0f };
+JPH_Vec3 result;
+JPH_Vec3_Add(&a, &b, &result);  // result = (5, 7, 9)
+```
+
+#### JPH_Vec3_Subtract
+
+```c
+void JPH_Vec3_Subtract(const JPH_Vec3* v1, const JPH_Vec3* v2, JPH_Vec3* result)
+```
+
+Subtract v2 from v1 component-wise.
+
+```c
+JPH_Vec3 a = { 5.0f, 7.0f, 9.0f };
+JPH_Vec3 b = { 1.0f, 2.0f, 3.0f };
+JPH_Vec3 result;
+JPH_Vec3_Subtract(&a, &b, &result);  // result = (4, 5, 6)
+```
+
+#### JPH_Vec3_Multiply
+
+```c
+void JPH_Vec3_Multiply(const JPH_Vec3* v1, const JPH_Vec3* v2, JPH_Vec3* result)
+```
+
+Multiply two vectors component-wise.
+
+#### JPH_Vec3_MultiplyScalar
+
+```c
+void JPH_Vec3_MultiplyScalar(const JPH_Vec3* v, float scalar, JPH_Vec3* result)
+```
+
+Multiply a vector by a scalar.
+
+```c
+JPH_Vec3 v = { 1.0f, 2.0f, 3.0f };
+JPH_Vec3 result;
+JPH_Vec3_MultiplyScalar(&v, 2.0f, &result);  // result = (2, 4, 6)
+```
+
+#### JPH_Vec3_Divide
+
+```c
+void JPH_Vec3_Divide(const JPH_Vec3* v1, const JPH_Vec3* v2, JPH_Vec3* result)
+```
+
+Divide v1 by v2 component-wise.
+
+#### JPH_Vec3_DivideScalar
+
+```c
+void JPH_Vec3_DivideScalar(const JPH_Vec3* v, float scalar, JPH_Vec3* result)
+```
+
+Divide a vector by a scalar.
+
+#### JPH_Vec3_Negate
+
+```c
+void JPH_Vec3_Negate(const JPH_Vec3* v, JPH_Vec3* result)
+```
+
+Negate all components of a vector.
+
+```c
+JPH_Vec3 v = { 1.0f, -2.0f, 3.0f };
+JPH_Vec3 result;
+JPH_Vec3_Negate(&v, &result);  // result = (-1, 2, -3)
+```
+
+### Products
+
+#### JPH_Vec3_DotProduct
+
+```c
+void JPH_Vec3_DotProduct(const JPH_Vec3* v1, const JPH_Vec3* v2, float* result)
+```
+
+Calculate the dot product of two vectors.
+
+```c
+JPH_Vec3 a = { 1.0f, 0.0f, 0.0f };
+JPH_Vec3 b = { 0.0f, 1.0f, 0.0f };
+float dot;
+JPH_Vec3_DotProduct(&a, &b, &dot);  // dot = 0 (perpendicular)
+```
+
+#### JPH_Vec3_Cross
+
+```c
+void JPH_Vec3_Cross(const JPH_Vec3* v1, const JPH_Vec3* v2, JPH_Vec3* result)
+```
+
+Calculate the cross product of two vectors.
+
+```c
+JPH_Vec3 x_axis = { 1.0f, 0.0f, 0.0f };
+JPH_Vec3 y_axis = { 0.0f, 1.0f, 0.0f };
+JPH_Vec3 z_axis;
+JPH_Vec3_Cross(&x_axis, &y_axis, &z_axis);  // z_axis = (0, 0, 1)
+```
+
+### Length and Normalization
+
+#### JPH_Vec3_Length
+
+```c
+float JPH_Vec3_Length(const JPH_Vec3* v)
+```
+
+Calculate the length (magnitude) of a vector.
+
+```c
+JPH_Vec3 v = { 3.0f, 4.0f, 0.0f };
+float len = JPH_Vec3_Length(&v);  // len = 5.0
+```
+
+#### JPH_Vec3_LengthSquared
+
+```c
+float JPH_Vec3_LengthSquared(const JPH_Vec3* v)
+```
+
+Calculate the squared length of a vector (faster than Length when you only need to compare magnitudes).
+
+```c
+JPH_Vec3 v = { 3.0f, 4.0f, 0.0f };
+float lenSq = JPH_Vec3_LengthSquared(&v);  // lenSq = 25.0
+```
+
+#### JPH_Vec3_Normalize
+
+```c
+void JPH_Vec3_Normalize(const JPH_Vec3* v, JPH_Vec3* result)
+```
+
+Normalize a vector to unit length. Same as `JPH_Vec3_Normalized`.
+
+```c
+JPH_Vec3 v = { 3.0f, 4.0f, 0.0f };
+JPH_Vec3 normalized;
+JPH_Vec3_Normalize(&v, &normalized);  // normalized = (0.6, 0.8, 0)
+```
+
+#### JPH_Vec3_Normalized
+
+```c
+void JPH_Vec3_Normalized(const JPH_Vec3* v, JPH_Vec3* result)
+```
+
+Return a normalized copy of the vector.
+
+### Comparisons
+
+#### JPH_Vec3_IsClose
+
+```c
+bool JPH_Vec3_IsClose(const JPH_Vec3* v1, const JPH_Vec3* v2, float maxDistSq)
+```
+
+Check if two vectors are close within a squared distance threshold.
+
+<ParamField path="maxDistSq" type="float">
+  Maximum squared distance for vectors to be considered close
+</ParamField>
+
+**Returns**: true if the squared distance between vectors is less than maxDistSq
+
+#### JPH_Vec3_IsNearZero
+
+```c
+bool JPH_Vec3_IsNearZero(const JPH_Vec3* v, float maxDistSq)
+```
+
+Check if a vector is near zero within a squared distance threshold.
+
+#### JPH_Vec3_IsNormalized
+
+```c
+bool JPH_Vec3_IsNormalized(const JPH_Vec3* v, float tolerance)
+```
+
+Check if a vector is normalized (unit length) within a tolerance.
+
+<ParamField path="tolerance" type="float">
+  How much the length can deviate from 1.0
+</ParamField>
+
+```c
+JPH_Vec3 v = { 1.0f, 0.0f, 0.0f };
+bool isNorm = JPH_Vec3_IsNormalized(&v, 0.001f);  // true
+```
+
+#### JPH_Vec3_IsNaN
+
+```c
+bool JPH_Vec3_IsNaN(const JPH_Vec3* v)
+```
+
+Check if any component is NaN (Not a Number).
+
+### Other Operations
+
+#### JPH_Vec3_Abs
+
+```c
+void JPH_Vec3_Abs(const JPH_Vec3* v, JPH_Vec3* result)
+```
+
+Get absolute value of each component.
+
+```c
+JPH_Vec3 v = { -1.0f, 2.0f, -3.0f };
+JPH_Vec3 result;
+JPH_Vec3_Abs(&v, &result);  // result = (1, 2, 3)
+```
+
+#### JPH_Vec3_MultiplyMatrix
+
+```c
+void JPH_Vec3_MultiplyMatrix(const JPH_Mat4* left, const JPH_Vec3* right, JPH_Vec3* result)
+```
+
+Transform a vector by a matrix.
+
+<ParamField path="left" type="const JPH_Mat4*">
+  Transformation matrix
+</ParamField>
+
+<ParamField path="right" type="const JPH_Vec3*">
+  Vector to transform
+</ParamField>
+
+## Example Usage
+
+### Basic Vector Math
+
+```c
+// Create vectors
+JPH_Vec3 position = { 10.0f, 5.0f, 0.0f };
+JPH_Vec3 velocity = { -2.0f, 1.0f, 0.0f };
+JPH_Vec3 acceleration = { 0.0f, -9.8f, 0.0f };  // gravity
+
+// Physics integration
+float deltaTime = 1.0f / 60.0f;
+
+// velocity += acceleration * dt
+JPH_Vec3 accelDt;
+JPH_Vec3_MultiplyScalar(&acceleration, deltaTime, &accelDt);
+JPH_Vec3 newVelocity;
+JPH_Vec3_Add(&velocity, &accelDt, &newVelocity);
+
+// position += velocity * dt
+JPH_Vec3 velDt;
+JPH_Vec3_MultiplyScalar(&newVelocity, deltaTime, &velDt);
+JPH_Vec3 newPosition;
+JPH_Vec3_Add(&position, &velDt, &newPosition);
+```
+
+### Vector Normalization
+
+```c
+// Create a direction from two points
+JPH_Vec3 start = { 0.0f, 0.0f, 0.0f };
+JPH_Vec3 end = { 3.0f, 4.0f, 0.0f };
+
+// Get direction vector
+JPH_Vec3 direction;
+JPH_Vec3_Subtract(&end, &start, &direction);
+
+// Get distance
+float distance = JPH_Vec3_Length(&direction);
+printf("Distance: %f\n", distance);  // 5.0
+
+// Normalize to get unit direction
+JPH_Vec3 unitDir;
+JPH_Vec3_Normalize(&direction, &unitDir);
+
+// Move 2 units along direction
+JPH_Vec3 offset;
+JPH_Vec3_MultiplyScalar(&unitDir, 2.0f, &offset);
+
+JPH_Vec3 newPos;
+JPH_Vec3_Add(&start, &offset, &newPos);
+// newPos = (1.2, 1.6, 0)
+```
+
+### Cross Product for Normal Calculation
+
+```c
+// Calculate triangle normal
+JPH_Vec3 v1 = { 0.0f, 0.0f, 0.0f };
+JPH_Vec3 v2 = { 1.0f, 0.0f, 0.0f };
+JPH_Vec3 v3 = { 0.0f, 1.0f, 0.0f };
+
+// Edge vectors
+JPH_Vec3 edge1, edge2;
+JPH_Vec3_Subtract(&v2, &v1, &edge1);
+JPH_Vec3_Subtract(&v3, &v1, &edge2);
+
+// Normal = cross product
+JPH_Vec3 normal;
+JPH_Vec3_Cross(&edge1, &edge2, &normal);
+
+// Normalize
+JPH_Vec3 unitNormal;
+JPH_Vec3_Normalize(&normal, &unitNormal);
+```
+
+### Dot Product for Angle Calculation
+
+```c
+// Check if two directions are similar
+JPH_Vec3 forward = { 0.0f, 0.0f, 1.0f };
+JPH_Vec3 toTarget = { 0.707f, 0.0f, 0.707f };
+
+// Normalize toTarget
+JPH_Vec3 toTargetNorm;
+JPH_Vec3_Normalize(&toTarget, &toTargetNorm);
+
+// Dot product gives cosine of angle
+float dot;
+JPH_Vec3_DotProduct(&forward, &toTargetNorm, &dot);
+
+if (dot > 0.866f) {  // cos(30°) ≈ 0.866
+    printf("Target is in front (within 30 degrees)\n");
+}
+```
+
+## See Also
+
+- [Quaternions](/api/math/quaternions) - Rotation representation
+- [Matrices](/api/math/matrices) - Transformation matrices

@@ -1,0 +1,307 @@
+---
+title: Job System
+description: Multi-threaded job execution system for JoltC
+---
+
+## Overview
+
+The Job System manages parallel execution of physics tasks across multiple threads. JoltC provides two implementations: a built-in thread pool and a callback-based system for custom job scheduling.
+
+## Structures
+
+### JobSystemThreadPoolConfig
+
+Configuration for the built-in thread pool job system.
+
+```c
+typedef struct JobSystemThreadPoolConfig {
+    uint32_t maxJobs;
+    uint32_t maxBarriers;
+    int32_t numThreads;
+} JobSystemThreadPoolConfig;
+```
+
+<ParamField path="maxJobs" type="uint32_t">
+  Maximum number of jobs that can be queued. Recommended: 2048.
+</ParamField>
+
+<ParamField path="maxBarriers" type="uint32_t">
+  Maximum number of job barriers. Recommended: 8.
+</ParamField>
+
+<ParamField path="numThreads" type="int32_t">
+  Number of worker threads to create. Use -1 to auto-detect based on CPU core count.
+</ParamField>
+
+---
+
+### JPH_JobSystemConfig
+
+Configuration for a custom callback-based job system.
+
+```c
+typedef struct JPH_JobSystemConfig {
+    void* context;
+    JPH_QueueJobCallback* queueJob;
+    JPH_QueueJobsCallback* queueJobs;
+    uint32_t maxConcurrency;
+    uint32_t maxBarriers;
+} JPH_JobSystemConfig;
+```
+
+<ParamField path="context" type="void*">
+  User data pointer passed to callback functions.
+</ParamField>
+
+<ParamField path="queueJob" type="JPH_QueueJobCallback*">
+  Callback function to queue a single job.
+</ParamField>
+
+<ParamField path="queueJobs" type="JPH_QueueJobsCallback*">
+  Callback function to queue multiple jobs at once.
+</ParamField>
+
+<ParamField path="maxConcurrency" type="uint32_t">
+  Maximum number of jobs that can run concurrently.
+</ParamField>
+
+<ParamField path="maxBarriers" type="uint32_t">
+  Maximum number of job barriers.
+</ParamField>
+
+## Callback Types
+
+### JPH_JobFunction
+
+Job function signature.
+
+```c
+typedef void JPH_JobFunction(void* arg);
+```
+
+<ParamField path="arg" type="void*">
+  User data passed to the job.
+</ParamField>
+
+---
+
+### JPH_QueueJobCallback
+
+Callback to queue a single job.
+
+```c
+typedef void JPH_QueueJobCallback(
+    void* context,
+    JPH_JobFunction* job,
+    void* arg
+);
+```
+
+<ParamField path="context" type="void*">
+  User context from JPH_JobSystemConfig.
+</ParamField>
+
+<ParamField path="job" type="JPH_JobFunction*">
+  Function pointer to execute.
+</ParamField>
+
+<ParamField path="arg" type="void*">
+  Argument to pass to the job function.
+</ParamField>
+
+---
+
+### JPH_QueueJobsCallback
+
+Callback to queue multiple jobs at once.
+
+```c
+typedef void JPH_QueueJobsCallback(
+    void* context,
+    JPH_JobFunction* job,
+    void** args,
+    uint32_t count
+);
+```
+
+<ParamField path="context" type="void*">
+  User context from JPH_JobSystemConfig.
+</ParamField>
+
+<ParamField path="job" type="JPH_JobFunction*">
+  Function pointer to execute for all jobs.
+</ParamField>
+
+<ParamField path="args" type="void**">
+  Array of arguments, one for each job.
+</ParamField>
+
+<ParamField path="count" type="uint32_t">
+  Number of jobs to queue.
+</ParamField>
+
+## Functions
+
+### JPH_JobSystemThreadPool_Create
+
+Creates a job system with a built-in thread pool.
+
+```c
+JPH_JobSystem* JPH_JobSystemThreadPool_Create(const JobSystemThreadPoolConfig* config);
+```
+
+<ParamField path="config" type="const JobSystemThreadPoolConfig*">
+  Configuration for the thread pool.
+</ParamField>
+
+<ParamField path="return" type="JPH_JobSystem*">
+  Pointer to the created job system, or `NULL` on failure.
+</ParamField>
+
+---
+
+### JPH_JobSystemCallback_Create
+
+Creates a job system using custom callbacks.
+
+```c
+JPH_JobSystem* JPH_JobSystemCallback_Create(const JPH_JobSystemConfig* config);
+```
+
+<ParamField path="config" type="const JPH_JobSystemConfig*">
+  Configuration with callback functions.
+</ParamField>
+
+<ParamField path="return" type="JPH_JobSystem*">
+  Pointer to the created job system, or `NULL` on failure.
+</ParamField>
+
+<Note>
+  Use the callback-based job system to integrate JoltC with your existing job scheduler or game engine's threading system.
+</Note>
+
+---
+
+### JPH_JobSystem_Destroy
+
+Destroys a job system and frees all resources.
+
+```c
+void JPH_JobSystem_Destroy(JPH_JobSystem* jobSystem);
+```
+
+<ParamField path="jobSystem" type="JPH_JobSystem*">
+  The job system to destroy.
+</ParamField>
+
+<Warning>
+  Ensure all physics updates have completed before destroying the job system.
+</Warning>
+
+## Examples
+
+### Built-in Thread Pool
+
+```c
+#include <joltc.h>
+#include <stdio.h>
+
+int main() {
+    if (!JPH_Init()) {
+        return 1;
+    }
+    
+    // Create a thread pool with auto-detected thread count
+    JobSystemThreadPoolConfig config = {
+        .maxJobs = 2048,
+        .maxBarriers = 8,
+        .numThreads = -1  // Use all available CPU cores
+    };
+    
+    JPH_JobSystem* jobSystem = JPH_JobSystemThreadPool_Create(&config);
+    if (!jobSystem) {
+        fprintf(stderr, "Failed to create job system\n");
+        JPH_Shutdown();
+        return 1;
+    }
+    
+    // Use the job system with physics updates
+    // ...
+    
+    JPH_JobSystem_Destroy(jobSystem);
+    JPH_Shutdown();
+    return 0;
+}
+```
+
+### Custom Callback-Based Job System
+
+```c
+#include <joltc.h>
+#include <stdio.h>
+
+// Your custom job scheduler
+typedef struct {
+    // Your job queue implementation
+} MyJobQueue;
+
+void MyQueueJob(void* context, JPH_JobFunction* job, void* arg) {
+    MyJobQueue* queue = (MyJobQueue*)context;
+    // Add the job to your queue
+    // ...
+}
+
+void MyQueueJobs(void* context, JPH_JobFunction* job, void** args, uint32_t count) {
+    MyJobQueue* queue = (MyJobQueue*)context;
+    // Add multiple jobs to your queue
+    for (uint32_t i = 0; i < count; i++) {
+        // Queue job with args[i]
+        // ...
+    }
+}
+
+int main() {
+    if (!JPH_Init()) {
+        return 1;
+    }
+    
+    MyJobQueue myQueue = { /* initialize */ };
+    
+    // Create a callback-based job system
+    JPH_JobSystemConfig config = {
+        .context = &myQueue,
+        .queueJob = MyQueueJob,
+        .queueJobs = MyQueueJobs,
+        .maxConcurrency = 8,
+        .maxBarriers = 8
+    };
+    
+    JPH_JobSystem* jobSystem = JPH_JobSystemCallback_Create(&config);
+    if (!jobSystem) {
+        fprintf(stderr, "Failed to create job system\n");
+        JPH_Shutdown();
+        return 1;
+    }
+    
+    // Use the job system with physics updates
+    // ...
+    
+    JPH_JobSystem_Destroy(jobSystem);
+    JPH_Shutdown();
+    return 0;
+}
+```
+
+## Performance Tips
+
+<Tip>
+  For optimal performance, set `maxJobs` to at least `JPH_MAX_PHYSICS_JOBS` (2048) and `maxBarriers` to at least `JPH_MAX_PHYSICS_BARRIERS` (8).
+</Tip>
+
+<Tip>
+  Use `-1` for `numThreads` to automatically match your CPU core count. For specific workloads, you may want to reserve some cores for other systems.
+</Tip>
+
+<Tip>
+  The callback-based job system allows you to integrate physics jobs with your game engine's existing job scheduler, preventing thread oversubscription.
+</Tip>

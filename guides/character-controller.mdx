@@ -1,0 +1,512 @@
+---
+title: Character Controller
+description: Implement player movement with JPH_Character and JPH_CharacterVirtual
+---
+
+# Character Controller
+
+JoltC provides two character controller implementations for player movement: `JPH_Character` (physics-based) and `JPH_CharacterVirtual` (kinematic).
+
+## Character Types
+
+<CardGroup cols={2}>
+  <Card title="JPH_Character" icon="person-running">
+    **Physics-based character**
+    - Real rigid body in physics world
+    - Affected by forces and collisions
+    - Best for objects that need realistic physics
+  </Card>
+  <Card title="JPH_CharacterVirtual" icon="ghost">
+    **Kinematic character**
+    - No rigid body, moved by code
+    - More predictable movement
+    - Best for player characters
+  </Card>
+</CardGroup>
+
+## CharacterVirtual (Recommended)
+
+The virtual character is recommended for most player controllers because it provides predictable movement.
+
+### Creating a Virtual Character
+
+<Steps>
+  <Step title="Create character shape">
+    Characters typically use capsule shapes:
+
+    ```c main.cpp:113-115
+    float characterHeight = 1.35f;
+    float characterRadius = 0.3f;
+    
+    JPH_CapsuleShape* capsuleShape = JPH_CapsuleShape_Create(
+        0.5f * characterHeight,
+        characterRadius
+    );
+    
+    // Position capsule upright
+    JPH_Vec3 position = { 0, 0.5f * characterHeight + characterRadius, 0 };
+    JPH_RotatedTranslatedShape* standingShape = 
+        JPH_RotatedTranslatedShape_Create(
+            &position,
+            NULL,  // Identity rotation
+            (JPH_Shape*)capsuleShape
+        );
+    ```
+  </Step>
+
+  <Step title="Configure character settings">
+    ```c main.cpp:117-123
+    JPH_CharacterVirtualSettings settings;
+    JPH_CharacterVirtualSettings_Init(&settings);
+    
+    // Set shape
+    settings.base.shape = (const JPH_Shape*)standingShape;
+    
+    // Configure slope detection
+    settings.base.up = (JPH_Vec3){ 0, 1, 0 };
+    settings.base.maxSlopeAngle = 0.785f; // 45 degrees
+    
+    // Supporting volume (ground detection)
+    settings.base.supportingVolume = (JPH_Plane){
+        .normal = { 0, 1, 0 },
+        .distance = -characterRadius
+    };
+    
+    // Physics properties
+    settings.mass = 70.0f;
+    settings.maxStrength = 100.0f;
+    settings.predictiveContactDistance = 0.1f;
+    settings.maxCollisionIterations = 5;
+    settings.maxConstraintIterations = 15;
+    settings.characterPadding = 0.02f;
+    ```
+  </Step>
+
+  <Step title="Create character instance">
+    ```c main.cpp:123
+    JPH_RVec3 characterPosition = { 0.0f, 2.0f, 0.0f };
+    JPH_Quat characterRotation = { 0, 0, 0, 1 };
+    
+    JPH_CharacterVirtual* character = JPH_CharacterVirtual_Create(
+        &settings,
+        &characterPosition,
+        &characterRotation,
+        0,  // user data
+        physicsSystem
+    );
+    ```
+  </Step>
+</Steps>
+
+### Moving the Character
+
+<Tabs>
+  <Tab title="Basic Movement">
+    Update the character each frame:
+
+    ```c joltc.h:2366
+    float deltaTime = 1.0f / 60.0f;
+    
+    // Set desired velocity
+    JPH_Vec3 desiredVelocity = { 5.0f, 0.0f, 0.0f };
+    JPH_CharacterVirtual_SetLinearVelocity(character, &desiredVelocity);
+    
+    // Update character
+    JPH_CharacterVirtual_Update(
+        character,
+        deltaTime,
+        objectLayer,
+        physicsSystem,
+        NULL,  // body filter
+        NULL   // shape filter
+    );
+    ```
+  </Tab>
+
+  <Tab title="With Gravity">
+    ```c
+    JPH_Vec3 gravity = { 0.0f, -9.81f, 0.0f };
+    JPH_Vec3 currentVelocity;
+    JPH_CharacterVirtual_GetLinearVelocity(character, &currentVelocity);
+    
+    // Apply gravity
+    if (!JPH_CharacterBase_IsSupported((JPH_CharacterBase*)character)) {
+        currentVelocity.y += gravity.y * deltaTime;
+    }
+    
+    // Add player input
+    JPH_Vec3 inputVelocity = { moveX * 5.0f, currentVelocity.y, moveZ * 5.0f };
+    JPH_CharacterVirtual_SetLinearVelocity(character, &inputVelocity);
+    
+    JPH_CharacterVirtual_Update(
+        character,
+        deltaTime,
+        objectLayer,
+        physicsSystem,
+        NULL,
+        NULL
+    );
+    ```
+  </Tab>
+
+  <Tab title="Extended Update">
+    Use extended update for automatic stair walking and floor sticking:
+
+    ```c joltc.h:2368-2369
+    JPH_ExtendedUpdateSettings extSettings = {
+        .stickToFloorStepDown = { 0, -0.5f, 0 },
+        .walkStairsStepUp = { 0, 0.4f, 0 },
+        .walkStairsMinStepForward = 0.02f,
+        .walkStairsStepForwardTest = 0.15f,
+        .walkStairsCosAngleForwardContact = cosf(0.785f), // 45 degrees
+        .walkStairsStepDownExtra = { 0, 0, 0 }
+    };
+    
+    JPH_CharacterVirtual_ExtendedUpdate(
+        character,
+        deltaTime,
+        &extSettings,
+        objectLayer,
+        physicsSystem,
+        NULL,
+        NULL
+    );
+    ```
+  </Tab>
+</Tabs>
+
+### Ground Detection
+
+```c joltc.h:2277-2286
+// Check if on ground
+JPH_GroundState groundState = JPH_CharacterBase_GetGroundState(
+    (JPH_CharacterBase*)character
+);
+
+if (groundState == JPH_GroundState_OnGround) {
+    // Character is on solid ground
+    JPH_Vec3 groundNormal;
+    JPH_CharacterBase_GetGroundNormal((JPH_CharacterBase*)character, &groundNormal);
+    
+    JPH_RVec3 groundPosition;
+    JPH_CharacterBase_GetGroundPosition((JPH_CharacterBase*)character, &groundPosition);
+    
+    JPH_Vec3 groundVelocity;
+    JPH_CharacterBase_GetGroundVelocity((JPH_CharacterBase*)character, &groundVelocity);
+} else if (groundState == JPH_GroundState_InAir) {
+    // Character is airborne
+} else if (groundState == JPH_GroundState_OnSteepGround) {
+    // On ground but too steep to stand
+}
+```
+
+### Stair Climbing
+
+```c joltc.h:2372-2376
+JPH_Vec3 currentVelocity;
+JPH_CharacterVirtual_GetLinearVelocity(character, &currentVelocity);
+
+// Check if can walk stairs
+if (JPH_CharacterVirtual_CanWalkStairs(character, &currentVelocity)) {
+    JPH_Vec3 stepUp = { 0, 0.4f, 0 };
+    JPH_Vec3 stepForward = { currentVelocity.x * deltaTime, 0, currentVelocity.z * deltaTime };
+    JPH_Vec3 stepForwardTest = { currentVelocity.x * 0.15f, 0, currentVelocity.z * 0.15f };
+    JPH_Vec3 stepDownExtra = { 0, 0, 0 };
+    
+    bool climbedStairs = JPH_CharacterVirtual_WalkStairs(
+        character,
+        deltaTime,
+        &stepUp,
+        &stepForward,
+        &stepForwardTest,
+        &stepDownExtra,
+        objectLayer,
+        physicsSystem,
+        NULL,
+        NULL
+    );
+}
+```
+
+### Stick to Floor
+
+```c joltc.h:2378-2380
+// Keep character on ground when walking down slopes
+JPH_Vec3 stepDown = { 0, -0.5f, 0 };
+bool stuckToFloor = JPH_CharacterVirtual_StickToFloor(
+    character,
+    &stepDown,
+    objectLayer,
+    physicsSystem,
+    NULL,
+    NULL
+);
+```
+
+## JPH_Character (Physics-based)
+
+Physics-based character for objects that need realistic physics interactions.
+
+### Creating a Physics Character
+
+```c joltc.h:2288-2295
+// Create shape
+JPH_CapsuleShape* capsule = JPH_CapsuleShape_Create(0.675f, 0.3f);
+
+// Configure settings
+JPH_CharacterSettings settings;
+JPH_CharacterSettings_Init(&settings);
+settings.base.shape = (const JPH_Shape*)capsule;
+settings.base.up = (JPH_Vec3){ 0, 1, 0 };
+settings.base.maxSlopeAngle = 0.785f;
+settings.layer = Layers::MOVING;
+settings.mass = 70.0f;
+settings.friction = 0.5f;
+settings.gravityFactor = 1.0f;
+
+// Create character
+JPH_RVec3 position = { 0, 2, 0 };
+JPH_Quat rotation = { 0, 0, 0, 1 };
+
+JPH_Character* character = JPH_Character_Create(
+    &settings,
+    &position,
+    &rotation,
+    0,  // user data
+    physicsSystem
+);
+
+// Add to physics world
+JPH_Character_AddToPhysicsSystem(character, JPH_Activation_Activate, true);
+```
+
+### Moving Physics Character
+
+```c joltc.h:2302-2304
+// Set velocity
+JPH_Vec3 velocity = { 5.0f, 0.0f, 0.0f };
+JPH_Character_SetLinearVelocity(character, &velocity, true);
+
+// Add impulse
+JPH_Vec3 impulse = { 0, 500.0f, 0 };  // Jump
+JPH_Character_AddImpulse(character, &impulse, true);
+
+// Get body for direct manipulation
+JPH_BodyID bodyId = JPH_Character_GetBodyID(character);
+```
+
+### Post-Simulation Update
+
+Call after physics step to update ground detection:
+
+```c joltc.h:2300
+float maxSeparationDistance = 0.1f;
+JPH_Character_PostSimulation(character, maxSeparationDistance, true);
+```
+
+## Contact Callbacks
+
+Handle character collision events:
+
+```c joltc.h:2394-2476
+static void OnContactAdded(
+    void* userData,
+    const JPH_CharacterVirtual* character,
+    const JPH_BodyID bodyID2,
+    const JPH_SubShapeID subShapeID2,
+    const JPH_RVec3* contactPosition,
+    const JPH_Vec3* contactNormal,
+    JPH_CharacterContactSettings* ioSettings
+) {
+    // Allow character to push other bodies
+    ioSettings->canPushCharacter = true;
+    ioSettings->canReceiveImpulses = true;
+}
+
+static bool OnContactValidate(
+    void* userData,
+    const JPH_CharacterVirtual* character,
+    const JPH_BodyID bodyID2,
+    const JPH_SubShapeID subShapeID2
+) {
+    // Return false to ignore this collision
+    return true;
+}
+
+JPH_CharacterContactListener_Procs procs = {
+    .OnContactAdded = OnContactAdded,
+    .OnContactValidate = OnContactValidate,
+    // ... other callbacks
+};
+
+JPH_CharacterContactListener_SetProcs(&procs);
+JPH_CharacterContactListener* listener = 
+    JPH_CharacterContactListener_Create(userData);
+
+JPH_CharacterVirtual_SetListener(character, listener);
+```
+
+## Character vs Character Collision
+
+Handle collisions between multiple characters:
+
+```c joltc.h:2500-2505
+// Create simple collision handler
+JPH_CharacterVsCharacterCollision* collision = 
+    JPH_CharacterVsCharacterCollision_CreateSimple();
+
+// Add all characters
+JPH_CharacterVsCharacterCollisionSimple_AddCharacter(collision, character1);
+JPH_CharacterVsCharacterCollisionSimple_AddCharacter(collision, character2);
+
+// Set on all characters
+JPH_CharacterVirtual_SetCharacterVsCharacterCollision(character1, collision);
+JPH_CharacterVirtual_SetCharacterVsCharacterCollision(character2, collision);
+```
+
+## Character Properties
+
+### Mass and Strength
+
+```c joltc.h:2342-2345
+// Get/set mass
+float mass = JPH_CharacterVirtual_GetMass(character);
+JPH_CharacterVirtual_SetMass(character, 80.0f);
+
+// Max push force
+float maxStrength = JPH_CharacterVirtual_GetMaxStrength(character);
+JPH_CharacterVirtual_SetMaxStrength(character, 150.0f);
+```
+
+### Shape Management
+
+```c joltc.h:2383-2384
+// Change shape at runtime (e.g., crouch)
+JPH_CapsuleShape* crouchShape = JPH_CapsuleShape_Create(0.4f, 0.3f);
+
+bool shapeChanged = JPH_CharacterVirtual_SetShape(
+    character,
+    (const JPH_Shape*)crouchShape,
+    0.1f,  // max penetration depth
+    objectLayer,
+    physicsSystem,
+    NULL,
+    NULL
+);
+
+if (!shapeChanged) {
+    // Not enough space to change shape
+}
+```
+
+### Slope Handling
+
+```c joltc.h:2270-2274
+// Set max walkable slope
+float maxSlopeAngle = JPH_M_PI / 4.0f;  // 45 degrees
+JPH_CharacterBase_SetMaxSlopeAngle(
+    (JPH_CharacterBase*)character,
+    maxSlopeAngle
+);
+
+// Check if slope is too steep
+JPH_Vec3 surfaceNormal = { 0.5f, 0.866f, 0.0f };
+bool tooSteep = JPH_CharacterBase_IsSlopeTooSteep(
+    (JPH_CharacterBase*)character,
+    &surfaceNormal
+);
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Choose the Right Controller">
+    - Use `JPH_CharacterVirtual` for player characters (predictable)
+    - Use `JPH_Character` for physics objects that move like characters
+    - Virtual character is more stable and easier to control
+  </Accordion>
+
+  <Accordion title="Movement Tuning">
+    - Start with low mass (50-100kg) and adjust
+    - Increase `maxStrength` if character can't push objects
+    - Use `maxCollisionIterations` of 3-5 for good accuracy
+    - Set `characterPadding` to ~0.02 for smooth wall sliding
+  </Accordion>
+
+  <Accordion title="Ground Detection">
+    - Configure `supportingVolume` to match character bottom
+    - Check `JPH_CharacterBase_IsSupported()` before allowing jumps
+    - Use `JPH_CharacterBase_GetGroundVelocity()` for moving platforms
+  </Accordion>
+
+  <Accordion title="Performance">
+    - Use capsule shapes (fastest for characters)
+    - Call `RefreshContacts()` only when needed
+    - Reuse character shapes instead of creating new ones
+    - Limit `maxNumHits` to reasonable value (32 default)
+  </Accordion>
+</AccordionGroup>
+
+## Complete Example
+
+```c
+// Create character shape
+JPH_CapsuleShape* capsule = JPH_CapsuleShape_Create(0.675f, 0.3f);
+JPH_Vec3 shapePos = { 0, 1.05f, 0 };
+JPH_RotatedTranslatedShape* shape = JPH_RotatedTranslatedShape_Create(
+    &shapePos, NULL, (JPH_Shape*)capsule
+);
+
+// Configure settings
+JPH_CharacterVirtualSettings settings;
+JPH_CharacterVirtualSettings_Init(&settings);
+settings.base.shape = (const JPH_Shape*)shape;
+settings.base.up = (JPH_Vec3){ 0, 1, 0 };
+settings.base.maxSlopeAngle = 0.785f;
+settings.base.supportingVolume = (JPH_Plane){ { 0, 1, 0 }, -0.3f };
+settings.mass = 70.0f;
+settings.maxStrength = 100.0f;
+
+// Create character
+JPH_RVec3 startPos = { 0, 2, 0 };
+JPH_CharacterVirtual* character = JPH_CharacterVirtual_Create(
+    &settings, &startPos, NULL, 0, physicsSystem
+);
+
+// Game loop
+while (running) {
+    // Get input
+    JPH_Vec3 moveDir = GetPlayerInput();
+    
+    // Apply gravity
+    JPH_Vec3 velocity;
+    JPH_CharacterVirtual_GetLinearVelocity(character, &velocity);
+    
+    if (!JPH_CharacterBase_IsSupported((JPH_CharacterBase*)character)) {
+        velocity.y -= 9.81f * deltaTime;
+    } else {
+        velocity.y = 0;
+        
+        // Jump
+        if (jumpPressed) {
+            velocity.y = 5.0f;
+        }
+    }
+    
+    // Apply movement
+    velocity.x = moveDir.x * 5.0f;
+    velocity.z = moveDir.z * 5.0f;
+    JPH_CharacterVirtual_SetLinearVelocity(character, &velocity);
+    
+    // Update character
+    JPH_CharacterVirtual_ExtendedUpdate(
+        character, deltaTime, &extSettings,
+        objectLayer, physicsSystem, NULL, NULL
+    );
+    
+    // Get position for rendering
+    JPH_RVec3 pos;
+    JPH_CharacterVirtual_GetPosition(character, &pos);
+    RenderPlayer(pos);
+}
+```

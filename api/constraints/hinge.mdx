@@ -1,0 +1,566 @@
+---
+title: Hinge Constraint
+description: API reference for JPH_HingeConstraint - creates a rotational joint around a single axis
+---
+
+# Hinge Constraint
+
+The `JPH_HingeConstraint` creates a hinge joint that allows rotation around a single axis while constraining all other degrees of freedom. It supports angular limits, motors, and friction.
+
+## Use Cases
+
+- Doors and gates
+- Wheels and axles
+- Robotic joints
+- Rotating platforms
+- Powered hinges with motors
+- Limited rotation joints (e.g., laptop screen)
+
+## Types
+
+### JPH_HingeConstraint
+
+```c
+typedef struct JPH_HingeConstraint JPH_HingeConstraint;
+```
+
+Opaque handle to a hinge constraint instance.
+
+### JPH_HingeConstraintSettings
+
+```c
+typedef struct JPH_HingeConstraintSettings {
+    JPH_ConstraintSettings  base;
+    JPH_ConstraintSpace     space;
+    JPH_RVec3               point1;
+    JPH_Vec3                hingeAxis1;
+    JPH_Vec3                normalAxis1;
+    JPH_RVec3               point2;
+    JPH_Vec3                hingeAxis2;
+    JPH_Vec3                normalAxis2;
+    float                   limitsMin;
+    float                   limitsMax;
+    JPH_SpringSettings      limitsSpringSettings;
+    float                   maxFrictionTorque;
+    JPH_MotorSettings       motorSettings;
+} JPH_HingeConstraintSettings;
+```
+
+Settings structure for creating a hinge constraint.
+
+<ParamField path="base" type="JPH_ConstraintSettings">
+  Base constraint settings (enabled, priority, etc.)
+</ParamField>
+
+<ParamField path="space" type="JPH_ConstraintSpace">
+  Coordinate space for the constraint points and axes
+</ParamField>
+
+<ParamField path="point1" type="JPH_RVec3">
+  Hinge attachment point on body 1
+</ParamField>
+
+<ParamField path="hingeAxis1" type="JPH_Vec3">
+  Rotation axis direction for body 1 (normalized)
+</ParamField>
+
+<ParamField path="normalAxis1" type="JPH_Vec3">
+  Reference axis perpendicular to hinge axis for body 1 (for measuring angle)
+</ParamField>
+
+<ParamField path="point2" type="JPH_RVec3">
+  Hinge attachment point on body 2
+</ParamField>
+
+<ParamField path="hingeAxis2" type="JPH_Vec3">
+  Rotation axis direction for body 2 (normalized)
+</ParamField>
+
+<ParamField path="normalAxis2" type="JPH_Vec3">
+  Reference axis perpendicular to hinge axis for body 2
+</ParamField>
+
+<ParamField path="limitsMin" type="float">
+  Minimum rotation angle in radians (use -π to +π range)
+</ParamField>
+
+<ParamField path="limitsMax" type="float">
+  Maximum rotation angle in radians
+</ParamField>
+
+<ParamField path="limitsSpringSettings" type="JPH_SpringSettings">
+  Spring settings for angular limits (soft limits)
+</ParamField>
+
+<ParamField path="maxFrictionTorque" type="float">
+  Maximum friction torque applied to the hinge (N·m)
+</ParamField>
+
+<ParamField path="motorSettings" type="JPH_MotorSettings">
+  Motor settings for powered rotation
+</ParamField>
+
+## Functions
+
+### Settings
+
+#### JPH_HingeConstraintSettings_Init
+
+```c
+void JPH_HingeConstraintSettings_Init(JPH_HingeConstraintSettings* settings);
+```
+
+Initializes a hinge constraint settings structure with default values.
+
+<ParamField path="settings" type="JPH_HingeConstraintSettings*">
+  Pointer to settings structure to initialize
+</ParamField>
+
+### Creation
+
+#### JPH_HingeConstraint_Create
+
+```c
+JPH_HingeConstraint* JPH_HingeConstraint_Create(
+    const JPH_HingeConstraintSettings* settings,
+    JPH_Body* body1,
+    JPH_Body* body2
+);
+```
+
+Creates a new hinge constraint between two bodies.
+
+<ParamField path="settings" type="const JPH_HingeConstraintSettings*">
+  Constraint configuration settings
+</ParamField>
+
+<ParamField path="body1" type="JPH_Body*">
+  First body to constrain
+</ParamField>
+
+<ParamField path="body2" type="JPH_Body*">
+  Second body to constrain
+</ParamField>
+
+<ResponseField name="return" type="JPH_HingeConstraint*">
+  Pointer to the created constraint, or NULL on failure
+</ResponseField>
+
+#### JPH_HingeConstraint_GetSettings
+
+```c
+void JPH_HingeConstraint_GetSettings(
+    JPH_HingeConstraint* constraint,
+    JPH_HingeConstraintSettings* settings
+);
+```
+
+Retrieves the current settings of a hinge constraint.
+
+<ParamField path="constraint" type="JPH_HingeConstraint*">
+  The constraint to query
+</ParamField>
+
+<ParamField path="settings" type="JPH_HingeConstraintSettings*">
+  Output structure to receive the settings
+</ParamField>
+
+### Querying State
+
+#### JPH_HingeConstraint_GetLocalSpacePoint1
+
+```c
+void JPH_HingeConstraint_GetLocalSpacePoint1(
+    const JPH_HingeConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the hinge point in body 1's local space.
+
+#### JPH_HingeConstraint_GetLocalSpacePoint2
+
+```c
+void JPH_HingeConstraint_GetLocalSpacePoint2(
+    const JPH_HingeConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the hinge point in body 2's local space.
+
+#### JPH_HingeConstraint_GetLocalSpaceHingeAxis1
+
+```c
+void JPH_HingeConstraint_GetLocalSpaceHingeAxis1(
+    const JPH_HingeConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the hinge axis in body 1's local space.
+
+#### JPH_HingeConstraint_GetLocalSpaceHingeAxis2
+
+```c
+void JPH_HingeConstraint_GetLocalSpaceHingeAxis2(
+    const JPH_HingeConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the hinge axis in body 2's local space.
+
+#### JPH_HingeConstraint_GetLocalSpaceNormalAxis1
+
+```c
+void JPH_HingeConstraint_GetLocalSpaceNormalAxis1(
+    const JPH_HingeConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the normal axis in body 1's local space.
+
+#### JPH_HingeConstraint_GetLocalSpaceNormalAxis2
+
+```c
+void JPH_HingeConstraint_GetLocalSpaceNormalAxis2(
+    const JPH_HingeConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the normal axis in body 2's local space.
+
+#### JPH_HingeConstraint_GetCurrentAngle
+
+```c
+float JPH_HingeConstraint_GetCurrentAngle(JPH_HingeConstraint* constraint);
+```
+
+Gets the current rotation angle of the hinge in radians.
+
+<ParamField path="constraint" type="JPH_HingeConstraint*">
+  The constraint to query
+</ParamField>
+
+<ResponseField name="return" type="float">
+  Current angle in radians
+</ResponseField>
+
+### Friction
+
+#### JPH_HingeConstraint_SetMaxFrictionTorque
+
+```c
+void JPH_HingeConstraint_SetMaxFrictionTorque(
+    JPH_HingeConstraint* constraint,
+    float frictionTorque
+);
+```
+
+Sets the maximum friction torque applied to the hinge.
+
+<ParamField path="constraint" type="JPH_HingeConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="frictionTorque" type="float">
+  Maximum friction torque in N·m
+</ParamField>
+
+#### JPH_HingeConstraint_GetMaxFrictionTorque
+
+```c
+float JPH_HingeConstraint_GetMaxFrictionTorque(JPH_HingeConstraint* constraint);
+```
+
+Gets the current maximum friction torque.
+
+<ParamField path="constraint" type="JPH_HingeConstraint*">
+  The constraint to query
+</ParamField>
+
+<ResponseField name="return" type="float">
+  Maximum friction torque in N·m
+</ResponseField>
+
+### Motor Control
+
+#### JPH_HingeConstraint_SetMotorSettings
+
+```c
+void JPH_HingeConstraint_SetMotorSettings(
+    JPH_HingeConstraint* constraint,
+    JPH_MotorSettings* settings
+);
+```
+
+Sets the motor settings for powered rotation.
+
+<ParamField path="constraint" type="JPH_HingeConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="settings" type="JPH_MotorSettings*">
+  Motor configuration settings
+</ParamField>
+
+#### JPH_HingeConstraint_GetMotorSettings
+
+```c
+void JPH_HingeConstraint_GetMotorSettings(
+    JPH_HingeConstraint* constraint,
+    JPH_MotorSettings* result
+);
+```
+
+Gets the current motor settings.
+
+#### JPH_HingeConstraint_SetMotorState
+
+```c
+void JPH_HingeConstraint_SetMotorState(
+    JPH_HingeConstraint* constraint,
+    JPH_MotorState state
+);
+```
+
+Sets the motor state.
+
+<ParamField path="constraint" type="JPH_HingeConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="state" type="JPH_MotorState">
+  Motor state:
+  - `JPH_MotorState_Off`: Motor disabled
+  - `JPH_MotorState_Velocity`: Velocity control mode
+  - `JPH_MotorState_Position`: Position control mode
+</ParamField>
+
+#### JPH_HingeConstraint_GetMotorState
+
+```c
+JPH_MotorState JPH_HingeConstraint_GetMotorState(JPH_HingeConstraint* constraint);
+```
+
+Gets the current motor state.
+
+#### JPH_HingeConstraint_SetTargetAngularVelocity
+
+```c
+void JPH_HingeConstraint_SetTargetAngularVelocity(
+    JPH_HingeConstraint* constraint,
+    float angularVelocity
+);
+```
+
+Sets the target angular velocity for velocity motor mode.
+
+<ParamField path="constraint" type="JPH_HingeConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="angularVelocity" type="float">
+  Target angular velocity in radians/second
+</ParamField>
+
+#### JPH_HingeConstraint_GetTargetAngularVelocity
+
+```c
+float JPH_HingeConstraint_GetTargetAngularVelocity(JPH_HingeConstraint* constraint);
+```
+
+Gets the target angular velocity.
+
+#### JPH_HingeConstraint_SetTargetAngle
+
+```c
+void JPH_HingeConstraint_SetTargetAngle(
+    JPH_HingeConstraint* constraint,
+    float angle
+);
+```
+
+Sets the target angle for position motor mode.
+
+<ParamField path="constraint" type="JPH_HingeConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="angle" type="float">
+  Target angle in radians
+</ParamField>
+
+#### JPH_HingeConstraint_GetTargetAngle
+
+```c
+float JPH_HingeConstraint_GetTargetAngle(JPH_HingeConstraint* constraint);
+```
+
+Gets the target angle.
+
+### Limits
+
+#### JPH_HingeConstraint_SetLimits
+
+```c
+void JPH_HingeConstraint_SetLimits(
+    JPH_HingeConstraint* constraint,
+    float inLimitsMin,
+    float inLimitsMax
+);
+```
+
+Sets the angular limits for the hinge.
+
+<ParamField path="constraint" type="JPH_HingeConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="inLimitsMin" type="float">
+  Minimum angle in radians
+</ParamField>
+
+<ParamField path="inLimitsMax" type="float">
+  Maximum angle in radians
+</ParamField>
+
+#### JPH_HingeConstraint_GetLimitsMin
+
+```c
+float JPH_HingeConstraint_GetLimitsMin(JPH_HingeConstraint* constraint);
+```
+
+Gets the minimum angle limit.
+
+#### JPH_HingeConstraint_GetLimitsMax
+
+```c
+float JPH_HingeConstraint_GetLimitsMax(JPH_HingeConstraint* constraint);
+```
+
+Gets the maximum angle limit.
+
+#### JPH_HingeConstraint_HasLimits
+
+```c
+bool JPH_HingeConstraint_HasLimits(JPH_HingeConstraint* constraint);
+```
+
+Checks if the hinge has angular limits enabled.
+
+#### JPH_HingeConstraint_GetLimitsSpringSettings
+
+```c
+void JPH_HingeConstraint_GetLimitsSpringSettings(
+    JPH_HingeConstraint* constraint,
+    JPH_SpringSettings* result
+);
+```
+
+Gets the spring settings for angular limits.
+
+#### JPH_HingeConstraint_SetLimitsSpringSettings
+
+```c
+void JPH_HingeConstraint_SetLimitsSpringSettings(
+    JPH_HingeConstraint* constraint,
+    JPH_SpringSettings* settings
+);
+```
+
+Sets the spring settings for angular limits.
+
+### Diagnostics
+
+#### JPH_HingeConstraint_GetTotalLambdaPosition
+
+```c
+void JPH_HingeConstraint_GetTotalLambdaPosition(
+    const JPH_HingeConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the total positional Lagrange multiplier (constraint force).
+
+#### JPH_HingeConstraint_GetTotalLambdaRotation
+
+```c
+void JPH_HingeConstraint_GetTotalLambdaRotation(
+    const JPH_HingeConstraint* constraint,
+    float rotation[2]
+);
+```
+
+Gets the total rotational Lagrange multiplier (constraint torque for 2 locked axes).
+
+#### JPH_HingeConstraint_GetTotalLambdaRotationLimits
+
+```c
+float JPH_HingeConstraint_GetTotalLambdaRotationLimits(
+    const JPH_HingeConstraint* constraint
+);
+```
+
+Gets the Lagrange multiplier for rotation limits.
+
+#### JPH_HingeConstraint_GetTotalLambdaMotor
+
+```c
+float JPH_HingeConstraint_GetTotalLambdaMotor(
+    const JPH_HingeConstraint* constraint
+);
+```
+
+Gets the Lagrange multiplier for the motor.
+
+## Example
+
+```c
+// Create a door hinge
+JPH_Body* doorFrame = /* ... static body ... */;
+JPH_Body* door = /* ... dynamic body ... */;
+
+// Initialize constraint settings
+JPH_HingeConstraintSettings settings;
+JPH_HingeConstraintSettings_Init(&settings);
+
+// Configure hinge
+settings.space = JPH_ConstraintSpace_WorldSpace;
+settings.point1 = (JPH_RVec3){ 0, 1, 0 };  // Hinge at door edge
+settings.point2 = (JPH_RVec3){ 0, 1, 0 };
+settings.hingeAxis1 = (JPH_Vec3){ 0, 1, 0 };  // Y-axis rotation
+settings.hingeAxis2 = (JPH_Vec3){ 0, 1, 0 };
+settings.normalAxis1 = (JPH_Vec3){ 1, 0, 0 };
+settings.normalAxis2 = (JPH_Vec3){ 1, 0, 0 };
+
+// Set limits: door can swing 0 to 120 degrees
+settings.limitsMin = 0.0f;
+settings.limitsMax = 2.09f;  // ~120 degrees in radians
+
+// Add friction for realistic feel
+settings.maxFrictionTorque = 5.0f;
+
+// Create the constraint
+JPH_HingeConstraint* hinge = JPH_HingeConstraint_Create(
+    &settings,
+    doorFrame,
+    door
+);
+
+JPH_PhysicsSystem_AddConstraint(physicsSystem, (JPH_Constraint*)hinge);
+
+// Later: Add motor to automatically close door
+JPH_HingeConstraint_SetMotorState(hinge, JPH_MotorState_Position);
+JPH_HingeConstraint_SetTargetAngle(hinge, 0.0f);  // Target: closed
+```
+
+## See Also
+
+- [Slider Constraint](/api/constraints/slider) - Linear sliding joint
+- [Six DOF Constraint](/api/constraints/six-dof) - Full 6-axis control
+- [Distance Constraint](/api/constraints/distance) - Distance limits

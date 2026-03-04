@@ -1,0 +1,389 @@
+---
+title: Installation
+description: Build JoltC from source and integrate it into your project
+---
+
+## Prerequisites
+
+Before building JoltC, ensure you have the following tools installed:
+
+- **CMake** 3.16 or later
+- **C++ Compiler** with C++17 support:
+  - Visual Studio 2019 or later (Windows)
+  - GCC 7.0 or later (Linux)
+  - Clang 5.0 or later (macOS, Linux)
+  - Xcode 10.0 or later (macOS, iOS)
+
+<Note>
+While JoltC requires a C++17 compiler to build, it exposes a pure C interface that can be consumed from any language with C FFI support.
+</Note>
+
+## Getting the Source Code
+
+Clone the JoltC repository from GitHub:
+
+```bash
+git clone https://github.com/amerkoleci/joltc.git
+cd joltc
+```
+
+JoltC will automatically download JoltPhysics during the CMake configuration step using `FetchContent`. By default, it fetches **JoltPhysics v5.5.0**.
+
+<Tip>
+If you have a local copy of JoltPhysics, place it in `./JoltPhysics` or `../JoltPhysics` relative to the JoltC source directory, and CMake will use that instead of downloading.
+</Tip>
+
+## Building from Source
+
+### Quick Build (Default Configuration)
+
+For a basic build with default settings:
+
+<CodeGroup>
+```bash Linux/macOS
+mkdir build
+cd build
+cmake ..
+cmake --build . --config Distribution
+```
+
+```bash Windows
+mkdir build
+cd build
+cmake ..
+cmake --build . --config Distribution
+```
+</CodeGroup>
+
+This creates a static library in `build/lib/`:
+- `joltc.lib` / `libjoltc.a` - Release build
+- `joltcd.lib` / `libjoltcd.a` - Debug build (with `d` suffix)
+
+### Building a Shared Library
+
+To build JoltC as a shared/dynamic library:
+
+```bash
+cmake -DJPH_BUILD_SHARED=ON ..
+cmake --build . --config Distribution
+```
+
+This produces:
+- Windows: `joltc.dll` + `joltc.lib` (import library)
+- Linux: `libjoltc.so`
+- macOS: `libjoltc.dylib`
+
+<Warning>
+When using a shared library, define `JPH_SHARED_LIBRARY_INCLUDE` in your application code before including `joltc.h` to ensure proper symbol imports.
+</Warning>
+
+### Build Configurations
+
+JoltC supports three build configurations:
+
+| Configuration | Optimizations | Assertions | Debug Symbols | Use Case |
+|--------------|---------------|------------|---------------|----------|
+| **Debug** | None (`/Od`, `-O0`) | Enabled | Yes | Development and debugging |
+| **Release** | Full (`/Ox`, `-O3`) | Disabled | Optional | Performance testing |
+| **Distribution** | Full | Disabled | No | Final shipping builds |
+
+Set the configuration during build:
+
+```bash
+cmake --build . --config Debug
+# or
+cmake --build . --config Release  
+# or
+cmake --build . --config Distribution
+```
+
+## CMake Build Options
+
+### Core Options
+
+#### Precision Mode
+
+```bash
+# Default: Single precision (float for positions)
+cmake ..
+
+# Double precision (double for positions - large worlds)
+cmake -DDOUBLE_PRECISION=ON ..
+```
+
+<Note>
+When `DOUBLE_PRECISION=ON`, the library is named `joltc_double` instead of `joltc`, and all `JPH_RVec3`/`JPH_RMat4` types use `double` instead of `float`.
+</Note>
+
+#### Build Type Options
+
+```bash
+# Build shared library instead of static
+cmake -DJPH_BUILD_SHARED=ON ..
+
+# Build samples (includes HelloWorld example)
+cmake -DJPH_SAMPLES=ON ..
+
+# Build tests
+cmake -DJPH_TESTS=ON ..
+
+# Enable install target
+cmake -DJPH_INSTALL=ON ..
+```
+
+### Advanced Options
+
+#### Deterministic Simulation
+
+```bash
+# Enable cross-platform deterministic physics
+cmake -DCROSS_PLATFORM_DETERMINISTIC=ON ..
+```
+
+This ensures the simulation produces identical results across different platforms and compilers, which is crucial for networked games or replay systems.
+
+#### SIMD Instruction Sets (x86/x64)
+
+```bash
+# Default: SSE4.1, SSE4.2, AVX, AVX2 enabled
+
+# Disable AVX2 for older CPUs
+cmake -DUSE_AVX2=OFF ..
+
+# Enable AVX-512 (requires compatible CPU)
+cmake -DUSE_AVX512=ON ..
+```
+
+#### Debug Features
+
+```bash
+# Enable assertions even in Release builds
+cmake -DUSE_ASSERTS=ON ..
+
+# Include debug renderer in Distribution builds  
+cmake -DDEBUG_RENDERER_IN_DISTRIBUTION=ON ..
+
+# Include profiler in Distribution builds
+cmake -DPROFILER_IN_DISTRIBUTION=ON ..
+```
+
+#### WebAssembly Options
+
+```bash
+# Enable SIMD for WebAssembly (requires browser support)
+cmake -DUSE_WASM_SIMD=ON ..
+```
+
+<Warning>
+WASM SIMD is disabled by default because not all browsers support it. Safari added support in March 2023.
+</Warning>
+
+### Complete Example
+
+A production build with common options:
+
+```bash
+cmake -DCMAKE_BUILD_TYPE=Distribution \
+      -DJPH_BUILD_SHARED=ON \
+      -DDEBUG_RENDERER_IN_DISTRIBUTION=ON \
+      -DUSE_AVX2=ON \
+      -DJPH_INSTALL=ON \
+      ..
+
+cmake --build . --config Distribution
+cmake --install . --prefix /usr/local
+```
+
+## Platform-Specific Instructions
+
+### Windows with Visual Studio
+
+Generate Visual Studio solution:
+
+```bash
+cmake -G "Visual Studio 17 2022" -A x64 ..
+```
+
+Then open `joltc.sln` in Visual Studio or build from command line:
+
+```bash
+cmake --build . --config Distribution
+```
+
+### macOS Universal Binaries
+
+By default, JoltC builds universal binaries (x86_64 + ARM64):
+
+```bash
+cmake -DCMAKE_OSX_ARCHITECTURES="x86_64;arm64" \
+      -DCMAKE_OSX_DEPLOYMENT_TARGET="11" \
+      ..
+```
+
+### Linux Cross-Compilation to ARM
+
+```bash
+cmake -DCROSS_COMPILE_ARM=ON \
+      -DCMAKE_CXX_COMPILER=clang++ \
+      ..
+```
+
+### iOS
+
+```bash
+cmake -DCMAKE_SYSTEM_NAME=iOS \
+      -DCMAKE_OSX_ARCHITECTURES=arm64 \
+      -DCMAKE_OSX_DEPLOYMENT_TARGET="12.0" \
+      -G Xcode \
+      ..
+```
+
+## Linking to Your Project
+
+### CMake Integration
+
+Add JoltC as a subdirectory in your project:
+
+```cmake CMakeLists.txt
+add_subdirectory(external/joltc)
+
+add_executable(MyGame main.c)
+target_link_libraries(MyGame PRIVATE joltc)
+```
+
+### Manual Linking
+
+If building manually, link against:
+
+**Static Library:**
+- Library: `joltc.lib` (Windows) or `libjoltc.a` (Unix)
+- Include: `include/joltc.h`
+- No additional defines needed
+
+**Shared Library:**
+- Library: `joltc.dll`/`.so`/`.dylib`
+- Include: `include/joltc.h`
+- Define: `JPH_SHARED_LIBRARY_INCLUDE` before including the header
+
+<CodeGroup>
+```c Static Library
+#include <joltc.h>
+
+int main() {
+    JPH_Init();
+    // ... your code
+    JPH_Shutdown();
+    return 0;
+}
+```
+
+```c Shared Library
+#define JPH_SHARED_LIBRARY_INCLUDE
+#include <joltc.h>
+
+int main() {
+    JPH_Init();
+    // ... your code
+    JPH_Shutdown();
+    return 0;
+}
+```
+</CodeGroup>
+
+## Compiler Flags
+
+When compiling your application:
+
+- **Include path**: Add `joltc/include` to your include directories
+- **C++ standard**: Not required (JoltC is a C API)
+- **Defines**: 
+  - `JPH_SHARED_LIBRARY_INCLUDE` - Only if using shared library
+  - Match `DOUBLE_PRECISION` setting used when building JoltC
+
+## Verifying Installation
+
+Test your installation with this minimal program:
+
+```c test.c
+#include <joltc.h>
+#include <stdio.h>
+
+int main() {
+    if (!JPH_Init()) {
+        printf("Failed to initialize JoltC\n");
+        return 1;
+    }
+    
+    printf("JoltC initialized successfully!\n");
+    
+    JPH_Shutdown();
+    return 0;
+}
+```
+
+Compile and run:
+
+<CodeGroup>
+```bash GCC/Clang
+gcc test.c -I/path/to/joltc/include -L/path/to/joltc/lib -ljoltc -lstdc++ -lm -o test
+./test
+```
+
+```bash MSVC
+cl test.c /I"path\to\joltc\include" /link joltc.lib
+test.exe
+```
+</CodeGroup>
+
+Expected output:
+```
+JoltC initialized successfully!
+```
+
+<Tip>
+If you see this message, JoltC is correctly installed and ready to use! Proceed to the [Quick Start](/quickstart) guide.
+</Tip>
+
+## Troubleshooting
+
+### CMake Cannot Find Compiler
+
+```bash
+cmake -DCMAKE_CXX_COMPILER=/usr/bin/g++ ..
+```
+
+### Linking Errors with C++ Standard Library
+
+Ensure you link against the C++ standard library:
+- GCC/Clang: `-lstdc++`
+- MSVC: Automatic
+
+### Symbol Import/Export Errors (Windows DLL)
+
+Ensure you defined `JPH_SHARED_LIBRARY_INCLUDE` before including `joltc.h` when using the shared library.
+
+### Performance Issues in Debug Builds
+
+Debug builds are significantly slower. Always use `Distribution` or `Release` for performance testing:
+
+```bash
+cmake --build . --config Distribution
+```
+
+## Next Steps
+
+Now that JoltC is installed, learn how to use it:
+
+<Steps>
+  <Step title="Quick Start Guide">
+    Create your first physics simulation with a complete working example.
+    
+    [Start the Quick Start →](/quickstart)
+  </Step>
+  
+  <Step title="API Overview">
+    Understand the core concepts and API structure.
+    
+    [Read API Overview →](/api/initialization)
+  </Step>
+</Steps>

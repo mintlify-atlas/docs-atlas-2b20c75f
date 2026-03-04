@@ -1,0 +1,413 @@
+---
+title: Mesh Shape
+description: API reference for JoltC mesh shape creation from triangles
+---
+
+Mesh shapes are used for complex static geometry like terrain, buildings, and level geometry. They are composed of triangles and are optimized for static (non-moving) objects.
+
+## Data Structures
+
+### JPH_Triangle
+
+Represents a triangle with three vertices.
+
+```c
+typedef struct JPH_Triangle {
+    JPH_Vec3 v1;
+    JPH_Vec3 v2;
+    JPH_Vec3 v3;
+    uint32_t materialIndex;
+} JPH_Triangle;
+```
+
+<ParamField path="v1" type="JPH_Vec3">
+  First vertex position
+</ParamField>
+
+<ParamField path="v2" type="JPH_Vec3">
+  Second vertex position
+</ParamField>
+
+<ParamField path="v3" type="JPH_Vec3">
+  Third vertex position
+</ParamField>
+
+<ParamField path="materialIndex" type="uint32_t">
+  Index of the physics material for this triangle
+</ParamField>
+
+### JPH_IndexedTriangle
+
+Represents a triangle using vertex indices.
+
+```c
+typedef struct JPH_IndexedTriangle {
+    uint32_t i1;
+    uint32_t i2;
+    uint32_t i3;
+    uint32_t materialIndex;
+    uint32_t userData;
+} JPH_IndexedTriangle;
+```
+
+<ParamField path="i1" type="uint32_t">
+  Index of first vertex in vertex array
+</ParamField>
+
+<ParamField path="i2" type="uint32_t">
+  Index of second vertex in vertex array
+</ParamField>
+
+<ParamField path="i3" type="uint32_t">
+  Index of third vertex in vertex array
+</ParamField>
+
+<ParamField path="materialIndex" type="uint32_t">
+  Index of the physics material for this triangle
+</ParamField>
+
+<ParamField path="userData" type="uint32_t">
+  User data associated with this triangle
+</ParamField>
+
+## Shape Creation
+
+### JPH_MeshShapeSettings_Create
+
+Creates mesh shape settings from an array of triangles.
+
+```c
+JPH_MeshShapeSettings* JPH_MeshShapeSettings_Create(
+    const JPH_Triangle* triangles,
+    uint32_t triangleCount
+);
+```
+
+<ParamField path="triangles" type="const JPH_Triangle*">
+  Array of triangles defining the mesh
+</ParamField>
+
+<ParamField path="triangleCount" type="uint32_t">
+  Number of triangles in the array
+</ParamField>
+
+**Returns:** Mesh shape settings
+
+**Example:**
+```c
+JPH_Triangle triangles[] = {
+    {
+        .v1 = {-10, 0, -10},
+        .v2 = {10, 0, -10},
+        .v3 = {10, 0, 10},
+        .materialIndex = 0
+    },
+    {
+        .v1 = {-10, 0, -10},
+        .v2 = {10, 0, 10},
+        .v3 = {-10, 0, 10},
+        .materialIndex = 0
+    }
+};
+
+JPH_MeshShapeSettings* settings = JPH_MeshShapeSettings_Create(triangles, 2);
+```
+
+### JPH_MeshShapeSettings_Create2
+
+Creates mesh shape settings from separate vertex and index arrays.
+
+```c
+JPH_MeshShapeSettings* JPH_MeshShapeSettings_Create2(
+    const JPH_Vec3* vertices,
+    uint32_t verticesCount,
+    const JPH_IndexedTriangle* triangles,
+    uint32_t triangleCount
+);
+```
+
+<ParamField path="vertices" type="const JPH_Vec3*">
+  Array of vertex positions
+</ParamField>
+
+<ParamField path="verticesCount" type="uint32_t">
+  Number of vertices in the array
+</ParamField>
+
+<ParamField path="triangles" type="const JPH_IndexedTriangle*">
+  Array of indexed triangles
+</ParamField>
+
+<ParamField path="triangleCount" type="uint32_t">
+  Number of triangles in the array
+</ParamField>
+
+**Returns:** Mesh shape settings
+
+**Example:**
+```c
+// Define a simple quad made of two triangles
+JPH_Vec3 vertices[] = {
+    {-10, 0, -10},  // 0
+    {10, 0, -10},   // 1
+    {10, 0, 10},    // 2
+    {-10, 0, 10}    // 3
+};
+
+JPH_IndexedTriangle triangles[] = {
+    {.i1 = 0, .i2 = 1, .i3 = 2, .materialIndex = 0, .userData = 0},
+    {.i1 = 0, .i2 = 2, .i3 = 3, .materialIndex = 0, .userData = 0}
+};
+
+JPH_MeshShapeSettings* settings = JPH_MeshShapeSettings_Create2(
+    vertices, 4,
+    triangles, 2
+);
+```
+
+### JPH_MeshShapeSettings_CreateShape
+
+Creates a mesh shape from settings.
+
+```c
+JPH_MeshShape* JPH_MeshShapeSettings_CreateShape(
+    const JPH_MeshShapeSettings* settings
+);
+```
+
+<ParamField path="settings" type="const JPH_MeshShapeSettings*">
+  The mesh shape settings
+</ParamField>
+
+**Returns:** A pointer to the created mesh shape
+
+**Example:**
+```c
+JPH_MeshShape* mesh = JPH_MeshShapeSettings_CreateShape(settings);
+```
+
+## Configuration
+
+### JPH_MeshShapeSettings_SetMaxTrianglesPerLeaf
+
+Sets the maximum number of triangles per leaf node in the acceleration structure.
+
+```c
+void JPH_MeshShapeSettings_SetMaxTrianglesPerLeaf(
+    JPH_MeshShapeSettings* settings,
+    uint32_t value
+);
+```
+
+<ParamField path="settings" type="JPH_MeshShapeSettings*">
+  The mesh shape settings
+</ParamField>
+
+<ParamField path="value" type="uint32_t">
+  Maximum triangles per leaf (default is typically 8)
+</ParamField>
+
+### JPH_MeshShapeSettings_GetMaxTrianglesPerLeaf
+
+Gets the maximum number of triangles per leaf node.
+
+```c
+uint32_t JPH_MeshShapeSettings_GetMaxTrianglesPerLeaf(
+    const JPH_MeshShapeSettings* settings
+);
+```
+
+<ParamField path="settings" type="const JPH_MeshShapeSettings*">
+  The mesh shape settings
+</ParamField>
+
+**Returns:** Maximum triangles per leaf
+
+### JPH_MeshShapeSettings_SetActiveEdgeCosThresholdAngle
+
+Sets the active edge threshold angle.
+
+```c
+void JPH_MeshShapeSettings_SetActiveEdgeCosThresholdAngle(
+    JPH_MeshShapeSettings* settings,
+    float value
+);
+```
+
+<ParamField path="settings" type="JPH_MeshShapeSettings*">
+  The mesh shape settings
+</ParamField>
+
+<ParamField path="value" type="float">
+  Cosine of the threshold angle for active edges
+</ParamField>
+
+<Note>
+Active edges are edges where objects should collide. Internal edges (shared by coplanar triangles) can be made inactive to prevent objects from getting stuck.
+</Note>
+
+### JPH_MeshShapeSettings_GetActiveEdgeCosThresholdAngle
+
+Gets the active edge threshold angle.
+
+```c
+float JPH_MeshShapeSettings_GetActiveEdgeCosThresholdAngle(
+    const JPH_MeshShapeSettings* settings
+);
+```
+
+<ParamField path="settings" type="const JPH_MeshShapeSettings*">
+  The mesh shape settings
+</ParamField>
+
+**Returns:** Cosine of the threshold angle
+
+### JPH_MeshShapeSettings_SetPerTriangleUserData
+
+Enables or disables per-triangle user data storage.
+
+```c
+void JPH_MeshShapeSettings_SetPerTriangleUserData(
+    JPH_MeshShapeSettings* settings,
+    bool value
+);
+```
+
+<ParamField path="settings" type="JPH_MeshShapeSettings*">
+  The mesh shape settings
+</ParamField>
+
+<ParamField path="value" type="bool">
+  `true` to store user data per triangle, `false` otherwise
+</ParamField>
+
+### JPH_MeshShapeSettings_GetPerTriangleUserData
+
+Checks if per-triangle user data is enabled.
+
+```c
+bool JPH_MeshShapeSettings_GetPerTriangleUserData(
+    const JPH_MeshShapeSettings* settings
+);
+```
+
+<ParamField path="settings" type="const JPH_MeshShapeSettings*">
+  The mesh shape settings
+</ParamField>
+
+**Returns:** `true` if per-triangle user data is enabled
+
+### JPH_MeshShapeSettings_SetBuildQuality
+
+Sets the build quality for the acceleration structure.
+
+```c
+void JPH_MeshShapeSettings_SetBuildQuality(
+    JPH_MeshShapeSettings* settings,
+    JPH_Mesh_Shape_BuildQuality value
+);
+```
+
+<ParamField path="settings" type="JPH_MeshShapeSettings*">
+  The mesh shape settings
+</ParamField>
+
+<ParamField path="value" type="JPH_Mesh_Shape_BuildQuality">
+  Build quality:
+  - `JPH_Mesh_Shape_BuildQuality_FavorRuntimePerformance`: Better runtime performance, slower build
+  - `JPH_Mesh_Shape_BuildQuality_FavorBuildSpeed`: Faster build, slightly worse runtime performance
+</ParamField>
+
+### JPH_MeshShapeSettings_GetBuildQuality
+
+Gets the build quality.
+
+```c
+JPH_Mesh_Shape_BuildQuality JPH_MeshShapeSettings_GetBuildQuality(
+    const JPH_MeshShapeSettings* settings
+);
+```
+
+<ParamField path="settings" type="const JPH_MeshShapeSettings*">
+  The mesh shape settings
+</ParamField>
+
+**Returns:** The build quality setting
+
+### JPH_MeshShapeSettings_Sanitize
+
+Sanitizes the mesh by removing degenerate triangles and duplicate vertices.
+
+```c
+void JPH_MeshShapeSettings_Sanitize(JPH_MeshShapeSettings* settings);
+```
+
+<ParamField path="settings" type="JPH_MeshShapeSettings*">
+  The mesh shape settings to sanitize
+</ParamField>
+
+<Note>
+Call this before creating the shape to ensure the mesh is valid.
+</Note>
+
+## Runtime Queries
+
+### JPH_MeshShape_GetTriangleUserData
+
+Gets the user data for a specific triangle.
+
+```c
+uint32_t JPH_MeshShape_GetTriangleUserData(
+    const JPH_MeshShape* shape,
+    JPH_SubShapeID id
+);
+```
+
+<ParamField path="shape" type="const JPH_MeshShape*">
+  The mesh shape
+</ParamField>
+
+<ParamField path="id" type="JPH_SubShapeID">
+  Sub-shape ID identifying the triangle
+</ParamField>
+
+**Returns:** The user data associated with the triangle
+
+## Complete Example
+
+```c
+// Create a simple ground plane mesh
+JPH_Vec3 vertices[] = {
+    {-100, 0, -100},
+    {100, 0, -100},
+    {100, 0, 100},
+    {-100, 0, 100}
+};
+
+JPH_IndexedTriangle triangles[] = {
+    {.i1 = 0, .i2 = 1, .i3 = 2, .materialIndex = 0, .userData = 1},
+    {.i1 = 0, .i2 = 2, .i3 = 3, .materialIndex = 0, .userData = 2}
+};
+
+// Create and configure settings
+JPH_MeshShapeSettings* settings = JPH_MeshShapeSettings_Create2(
+    vertices, 4,
+    triangles, 2
+);
+
+JPH_MeshShapeSettings_SetPerTriangleUserData(settings, true);
+JPH_MeshShapeSettings_SetBuildQuality(settings, JPH_Mesh_Shape_BuildQuality_FavorRuntimePerformance);
+JPH_MeshShapeSettings_Sanitize(settings);
+
+// Create the shape
+JPH_MeshShape* mesh = JPH_MeshShapeSettings_CreateShape(settings);
+
+// Use the mesh in a body...
+JPH_BodyCreationSettings* bodySettings = JPH_BodyCreationSettings_Create3(
+    (JPH_Shape*)mesh,
+    &position,
+    &rotation,
+    JPH_MotionType_Static,
+    LAYER_NON_MOVING
+);
+```

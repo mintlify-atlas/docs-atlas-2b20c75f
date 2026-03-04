@@ -1,0 +1,632 @@
+---
+title: Collision Queries
+description: Functions for raycasting, shape casting, and collision detection queries
+---
+
+## Overview
+
+JoltC provides broad-phase and narrow-phase collision query interfaces for detecting collisions, performing raycasts, and shape casts in the physics world.
+
+## Broad Phase Query
+
+The broad phase performs fast, coarse collision detection using bounding boxes.
+
+### Get Broad Phase Query
+
+<CodeGroup>
+```c JPH_PhysicsSystem_GetBroadPhaseQuery
+const JPH_BroadPhaseQuery* JPH_PhysicsSystem_GetBroadPhaseQuery(
+    const JPH_PhysicsSystem* system
+);
+```
+</CodeGroup>
+
+Retrieve the broad phase query interface from the physics system.
+
+<ParamField path="system" type="const JPH_PhysicsSystem*">
+  The physics system instance
+</ParamField>
+
+<ResponseField name="return" type="const JPH_BroadPhaseQuery*">
+  Pointer to the broad phase query interface
+</ResponseField>
+
+### Raycast (Broad Phase)
+
+<CodeGroup>
+```c JPH_BroadPhaseQuery_CastRay
+bool JPH_BroadPhaseQuery_CastRay(
+    const JPH_BroadPhaseQuery* query,
+    const JPH_Vec3* origin,
+    const JPH_Vec3* direction,
+    JPH_RayCastBodyCollectorCallback* callback,
+    void* userData,
+    const JPH_BroadPhaseLayerFilter* broadPhaseLayerFilter,
+    const JPH_ObjectLayerFilter* objectLayerFilter
+);
+```
+</CodeGroup>
+
+Cast a ray through the broad phase and collect all potentially intersecting bodies.
+
+<ParamField path="query" type="const JPH_BroadPhaseQuery*">
+  The broad phase query interface
+</ParamField>
+
+<ParamField path="origin" type="const JPH_Vec3*">
+  Ray origin point
+</ParamField>
+
+<ParamField path="direction" type="const JPH_Vec3*">
+  Ray direction (length determines max distance)
+</ParamField>
+
+<ParamField path="callback" type="JPH_RayCastBodyCollectorCallback*">
+  Callback function to receive results: `float callback(void* userData, const JPH_BroadPhaseCastResult* result)`
+  
+  Return the new early out fraction (1.0 to continue with all results)
+</ParamField>
+
+<ParamField path="userData" type="void*">
+  User data passed to callback
+</ParamField>
+
+<ParamField path="broadPhaseLayerFilter" type="const JPH_BroadPhaseLayerFilter*">
+  Optional filter for broad phase layers (can be NULL)
+</ParamField>
+
+<ParamField path="objectLayerFilter" type="const JPH_ObjectLayerFilter*">
+  Optional filter for object layers (can be NULL)
+</ParamField>
+
+### Raycast with Result Callback
+
+<CodeGroup>
+```c JPH_BroadPhaseQuery_CastRay2
+bool JPH_BroadPhaseQuery_CastRay2(
+    const JPH_BroadPhaseQuery* query,
+    const JPH_Vec3* origin,
+    const JPH_Vec3* direction,
+    JPH_CollisionCollectorType collectorType,
+    JPH_RayCastBodyResultCallback* callback,
+    void* userData,
+    const JPH_BroadPhaseLayerFilter* broadPhaseLayerFilter,
+    const JPH_ObjectLayerFilter* objectLayerFilter
+);
+```
+</CodeGroup>
+
+Cast a ray with a specific collector type (AllHit, ClosestHit, etc.).
+
+<ParamField path="collectorType" type="JPH_CollisionCollectorType">
+  Type of collector:
+  - `JPH_CollisionCollectorType_AllHit` - Collect all hits
+  - `JPH_CollisionCollectorType_AllHitSorted` - Collect all hits sorted by distance
+  - `JPH_CollisionCollectorType_ClosestHit` - Only the closest hit
+  - `JPH_CollisionCollectorType_AnyHit` - Any hit (fastest)
+</ParamField>
+
+<ParamField path="callback" type="JPH_RayCastBodyResultCallback*">
+  Result callback: `void callback(void* userData, const JPH_BroadPhaseCastResult* result)`
+</ParamField>
+
+### Collide Axis-Aligned Box
+
+<CodeGroup>
+```c JPH_BroadPhaseQuery_CollideAABox
+bool JPH_BroadPhaseQuery_CollideAABox(
+    const JPH_BroadPhaseQuery* query,
+    const JPH_AABox* box,
+    JPH_CollideShapeBodyCollectorCallback* callback,
+    void* userData,
+    const JPH_BroadPhaseLayerFilter* broadPhaseLayerFilter,
+    const JPH_ObjectLayerFilter* objectLayerFilter
+);
+```
+</CodeGroup>
+
+Find all bodies that potentially overlap with an axis-aligned bounding box.
+
+<ParamField path="box" type="const JPH_AABox*">
+  The axis-aligned bounding box to test
+</ParamField>
+
+<ParamField path="callback" type="JPH_CollideShapeBodyCollectorCallback*">
+  Collector callback: `float callback(void* userData, JPH_BodyID bodyID)`
+  
+  Return the new early out fraction
+</ParamField>
+
+### Collide Sphere
+
+<CodeGroup>
+```c JPH_BroadPhaseQuery_CollideSphere
+bool JPH_BroadPhaseQuery_CollideSphere(
+    const JPH_BroadPhaseQuery* query,
+    const JPH_Vec3* center,
+    float radius,
+    JPH_CollideShapeBodyCollectorCallback* callback,
+    void* userData,
+    const JPH_BroadPhaseLayerFilter* broadPhaseLayerFilter,
+    const JPH_ObjectLayerFilter* objectLayerFilter
+);
+```
+</CodeGroup>
+
+Find all bodies that potentially overlap with a sphere.
+
+<ParamField path="center" type="const JPH_Vec3*">
+  Center of the sphere
+</ParamField>
+
+<ParamField path="radius" type="float">
+  Radius of the sphere
+</ParamField>
+
+### Collide Point
+
+<CodeGroup>
+```c JPH_BroadPhaseQuery_CollidePoint
+bool JPH_BroadPhaseQuery_CollidePoint(
+    const JPH_BroadPhaseQuery* query,
+    const JPH_Vec3* point,
+    JPH_CollideShapeBodyCollectorCallback* callback,
+    void* userData,
+    const JPH_BroadPhaseLayerFilter* broadPhaseLayerFilter,
+    const JPH_ObjectLayerFilter* objectLayerFilter
+);
+```
+</CodeGroup>
+
+Find all bodies that potentially contain a point.
+
+<ParamField path="point" type="const JPH_Vec3*">
+  The point to test
+</ParamField>
+
+## Narrow Phase Query
+
+The narrow phase performs precise collision detection using actual shape geometry.
+
+### Get Narrow Phase Query
+
+<CodeGroup>
+```c JPH_PhysicsSystem_GetNarrowPhaseQuery
+const JPH_NarrowPhaseQuery* JPH_PhysicsSystem_GetNarrowPhaseQuery(
+    const JPH_PhysicsSystem* system
+);
+```
+</CodeGroup>
+
+Retrieve the narrow phase query interface (requires system lock).
+
+<CodeGroup>
+```c JPH_PhysicsSystem_GetNarrowPhaseQueryNoLock
+const JPH_NarrowPhaseQuery* JPH_PhysicsSystem_GetNarrowPhaseQueryNoLock(
+    const JPH_PhysicsSystem* system
+);
+```
+</CodeGroup>
+
+Retrieve the narrow phase query interface without locking.
+
+### Raycast (Narrow Phase)
+
+<CodeGroup>
+```c JPH_NarrowPhaseQuery_CastRay
+bool JPH_NarrowPhaseQuery_CastRay(
+    const JPH_NarrowPhaseQuery* query,
+    const JPH_RVec3* origin,
+    const JPH_Vec3* direction,
+    JPH_RayCastResult* hit,
+    const JPH_BroadPhaseLayerFilter* broadPhaseLayerFilter,
+    const JPH_ObjectLayerFilter* objectLayerFilter,
+    const JPH_BodyFilter* bodyFilter
+);
+```
+</CodeGroup>
+
+Cast a ray and get the closest hit.
+
+<ParamField path="origin" type="const JPH_RVec3*">
+  Ray origin (uses real precision for position)
+</ParamField>
+
+<ParamField path="direction" type="const JPH_Vec3*">
+  Ray direction (length determines max distance)
+</ParamField>
+
+<ParamField path="hit" type="JPH_RayCastResult*">
+  Output result structure containing:
+  - `bodyID` - The body that was hit
+  - `fraction` - Fraction along ray where hit occurred (0-1)
+  - `subShapeID2` - Sub-shape that was hit
+</ParamField>
+
+<ParamField path="bodyFilter" type="const JPH_BodyFilter*">
+  Optional filter for bodies (can be NULL)
+</ParamField>
+
+<ResponseField name="return" type="bool">
+  True if a hit was found
+</ResponseField>
+
+### Raycast with Settings
+
+<CodeGroup>
+```c JPH_NarrowPhaseQuery_CastRay2
+bool JPH_NarrowPhaseQuery_CastRay2(
+    const JPH_NarrowPhaseQuery* query,
+    const JPH_RVec3* origin,
+    const JPH_Vec3* direction,
+    const JPH_RayCastSettings* rayCastSettings,
+    JPH_CastRayCollectorCallback* callback,
+    void* userData,
+    const JPH_BroadPhaseLayerFilter* broadPhaseLayerFilter,
+    const JPH_ObjectLayerFilter* objectLayerFilter,
+    const JPH_BodyFilter* bodyFilter,
+    const JPH_ShapeFilter* shapeFilter
+);
+```
+</CodeGroup>
+
+Cast a ray with custom settings and collector callback.
+
+<ParamField path="rayCastSettings" type="const JPH_RayCastSettings*">
+  Ray cast settings structure:
+  - `backFaceModeTriangles` - How to handle back-facing triangles
+  - `backFaceModeConvex` - How to handle back-facing convex shapes
+  - `treatConvexAsSolid` - Whether convex shapes are solid
+</ParamField>
+
+<ParamField path="callback" type="JPH_CastRayCollectorCallback*">
+  Collector callback: `float callback(void* userData, const JPH_RayCastResult* result)`
+  
+  Return the new early out fraction
+</ParamField>
+
+<ParamField path="shapeFilter" type="const JPH_ShapeFilter*">
+  Optional filter for shapes (can be NULL)
+</ParamField>
+
+### Raycast with Collector Type
+
+<CodeGroup>
+```c JPH_NarrowPhaseQuery_CastRay3
+bool JPH_NarrowPhaseQuery_CastRay3(
+    const JPH_NarrowPhaseQuery* query,
+    const JPH_RVec3* origin,
+    const JPH_Vec3* direction,
+    const JPH_RayCastSettings* rayCastSettings,
+    JPH_CollisionCollectorType collectorType,
+    JPH_CastRayResultCallback* callback,
+    void* userData,
+    const JPH_BroadPhaseLayerFilter* broadPhaseLayerFilter,
+    const JPH_ObjectLayerFilter* objectLayerFilter,
+    const JPH_BodyFilter* bodyFilter,
+    const JPH_ShapeFilter* shapeFilter
+);
+```
+</CodeGroup>
+
+Cast a ray with a specific collector type and result callback.
+
+<ParamField path="callback" type="JPH_CastRayResultCallback*">
+  Result callback: `void callback(void* userData, const JPH_RayCastResult* result)`
+</ParamField>
+
+### Collide Point
+
+<CodeGroup>
+```c JPH_NarrowPhaseQuery_CollidePoint
+bool JPH_NarrowPhaseQuery_CollidePoint(
+    const JPH_NarrowPhaseQuery* query,
+    const JPH_RVec3* point,
+    JPH_CollidePointCollectorCallback* callback,
+    void* userData,
+    const JPH_BroadPhaseLayerFilter* broadPhaseLayerFilter,
+    const JPH_ObjectLayerFilter* objectLayerFilter,
+    const JPH_BodyFilter* bodyFilter,
+    const JPH_ShapeFilter* shapeFilter
+);
+```
+</CodeGroup>
+
+Test if a point collides with any shapes.
+
+<ParamField path="point" type="const JPH_RVec3*">
+  The point to test
+</ParamField>
+
+<ParamField path="callback" type="JPH_CollidePointCollectorCallback*">
+  Collector callback: `float callback(void* userData, const JPH_CollidePointResult* result)`
+  
+  Result contains `bodyID` and `subShapeID2`
+</ParamField>
+
+### Collide Point with Collector Type
+
+<CodeGroup>
+```c JPH_NarrowPhaseQuery_CollidePoint2
+bool JPH_NarrowPhaseQuery_CollidePoint2(
+    const JPH_NarrowPhaseQuery* query,
+    const JPH_RVec3* point,
+    JPH_CollisionCollectorType collectorType,
+    JPH_CollidePointResultCallback* callback,
+    void* userData,
+    const JPH_BroadPhaseLayerFilter* broadPhaseLayerFilter,
+    const JPH_ObjectLayerFilter* objectLayerFilter,
+    const JPH_BodyFilter* bodyFilter,
+    const JPH_ShapeFilter* shapeFilter
+);
+```
+</CodeGroup>
+
+<ParamField path="callback" type="JPH_CollidePointResultCallback*">
+  Result callback: `void callback(void* userData, const JPH_CollidePointResult* result)`
+</ParamField>
+
+### Collide Shape
+
+<CodeGroup>
+```c JPH_NarrowPhaseQuery_CollideShape
+bool JPH_NarrowPhaseQuery_CollideShape(
+    const JPH_NarrowPhaseQuery* query,
+    const JPH_Shape* shape,
+    const JPH_Vec3* scale,
+    const JPH_RMat4* centerOfMassTransform,
+    const JPH_CollideShapeSettings* settings,
+    JPH_RVec3* baseOffset,
+    JPH_CollideShapeCollectorCallback* callback,
+    void* userData,
+    const JPH_BroadPhaseLayerFilter* broadPhaseLayerFilter,
+    const JPH_ObjectLayerFilter* objectLayerFilter,
+    const JPH_BodyFilter* bodyFilter,
+    const JPH_ShapeFilter* shapeFilter
+);
+```
+</CodeGroup>
+
+Test collision between a shape and the world.
+
+<ParamField path="shape" type="const JPH_Shape*">
+  The shape to test
+</ParamField>
+
+<ParamField path="scale" type="const JPH_Vec3*">
+  Scale to apply to the shape
+</ParamField>
+
+<ParamField path="centerOfMassTransform" type="const JPH_RMat4*">
+  Transform of the shape's center of mass
+</ParamField>
+
+<ParamField path="settings" type="const JPH_CollideShapeSettings*">
+  Collision settings (backface mode, tolerance, etc.)
+</ParamField>
+
+<ParamField path="baseOffset" type="JPH_RVec3*">
+  Base offset for results
+</ParamField>
+
+<ParamField path="callback" type="JPH_CollideShapeCollectorCallback*">
+  Collector callback: `float callback(void* userData, const JPH_CollideShapeResult* result)`
+  
+  Result contains contact points, penetration depth, and sub-shape IDs
+</ParamField>
+
+### Collide Shape with Collector Type
+
+<CodeGroup>
+```c JPH_NarrowPhaseQuery_CollideShape2
+bool JPH_NarrowPhaseQuery_CollideShape2(
+    const JPH_NarrowPhaseQuery* query,
+    const JPH_Shape* shape,
+    const JPH_Vec3* scale,
+    const JPH_RMat4* centerOfMassTransform,
+    const JPH_CollideShapeSettings* settings,
+    JPH_RVec3* baseOffset,
+    JPH_CollisionCollectorType collectorType,
+    JPH_CollideShapeResultCallback* callback,
+    void* userData,
+    const JPH_BroadPhaseLayerFilter* broadPhaseLayerFilter,
+    const JPH_ObjectLayerFilter* objectLayerFilter,
+    const JPH_BodyFilter* bodyFilter,
+    const JPH_ShapeFilter* shapeFilter
+);
+```
+</CodeGroup>
+
+<ParamField path="callback" type="JPH_CollideShapeResultCallback*">
+  Result callback: `void callback(void* userData, const JPH_CollideShapeResult* result)`
+</ParamField>
+
+### Cast Shape
+
+<CodeGroup>
+```c JPH_NarrowPhaseQuery_CastShape
+bool JPH_NarrowPhaseQuery_CastShape(
+    const JPH_NarrowPhaseQuery* query,
+    const JPH_Shape* shape,
+    const JPH_RMat4* worldTransform,
+    const JPH_Vec3* direction,
+    const JPH_ShapeCastSettings* settings,
+    JPH_RVec3* baseOffset,
+    JPH_CastShapeCollectorCallback* callback,
+    void* userData,
+    const JPH_BroadPhaseLayerFilter* broadPhaseLayerFilter,
+    const JPH_ObjectLayerFilter* objectLayerFilter,
+    const JPH_BodyFilter* bodyFilter,
+    const JPH_ShapeFilter* shapeFilter
+);
+```
+</CodeGroup>
+
+Cast a shape through the world (shape sweep).
+
+<ParamField path="worldTransform" type="const JPH_RMat4*">
+  Initial transform of the shape
+</ParamField>
+
+<ParamField path="direction" type="const JPH_Vec3*">
+  Direction and distance to cast
+</ParamField>
+
+<ParamField path="settings" type="const JPH_ShapeCastSettings*">
+  Shape cast settings (backface modes, return deepest point, etc.)
+</ParamField>
+
+<ParamField path="callback" type="JPH_CastShapeCollectorCallback*">
+  Collector callback: `float callback(void* userData, const JPH_ShapeCastResult* result)`
+  
+  Result contains hit fraction, contact points, and penetration info
+</ParamField>
+
+### Cast Shape with Collector Type
+
+<CodeGroup>
+```c JPH_NarrowPhaseQuery_CastShape2
+bool JPH_NarrowPhaseQuery_CastShape2(
+    const JPH_NarrowPhaseQuery* query,
+    const JPH_Shape* shape,
+    const JPH_RMat4* worldTransform,
+    const JPH_Vec3* direction,
+    const JPH_ShapeCastSettings* settings,
+    JPH_RVec3* baseOffset,
+    JPH_CollisionCollectorType collectorType,
+    JPH_CastShapeResultCallback* callback,
+    void* userData,
+    const JPH_BroadPhaseLayerFilter* broadPhaseLayerFilter,
+    const JPH_ObjectLayerFilter* objectLayerFilter,
+    const JPH_BodyFilter* bodyFilter,
+    const JPH_ShapeFilter* shapeFilter
+);
+```
+</CodeGroup>
+
+<ParamField path="callback" type="JPH_CastShapeResultCallback*">
+  Result callback: `void callback(void* userData, const JPH_ShapeCastResult* result)`
+</ParamField>
+
+## Settings Structures
+
+### Ray Cast Settings
+
+<CodeGroup>
+```c Initialize Settings
+JPH_RayCastSettings settings;
+settings.backFaceModeTriangles = JPH_BackFaceMode_IgnoreBackFaces;
+settings.backFaceModeConvex = JPH_BackFaceMode_IgnoreBackFaces;
+settings.treatConvexAsSolid = true;
+```
+</CodeGroup>
+
+### Collide Shape Settings
+
+<CodeGroup>
+```c JPH_CollideShapeSettings_Init
+void JPH_CollideShapeSettings_Init(JPH_CollideShapeSettings* settings);
+```
+</CodeGroup>
+
+Initialize collide shape settings with default values.
+
+### Shape Cast Settings
+
+<CodeGroup>
+```c JPH_ShapeCastSettings_Init
+void JPH_ShapeCastSettings_Init(JPH_ShapeCastSettings* settings);
+```
+</CodeGroup>
+
+Initialize shape cast settings with default values.
+
+## Example Usage
+
+<CodeGroup>
+```c Raycast Example
+// Simple raycast
+JPH_RayCastResult hit;
+JPH_Vec3 origin = {0, 10, 0};
+JPH_Vec3 direction = {0, -20, 0}; // Ray goes down 20 units
+
+const JPH_NarrowPhaseQuery* query = 
+    JPH_PhysicsSystem_GetNarrowPhaseQuery(physics_system);
+
+if (JPH_NarrowPhaseQuery_CastRay(query, &origin, &direction, &hit,
+    NULL, NULL, NULL)) {
+    printf("Hit body %u at fraction %f\n", hit.bodyID, hit.fraction);
+}
+```
+
+```c Shape Cast Example
+// Cast a sphere forward
+JPH_SphereShape* sphere = JPH_SphereShape_Create(1.0f);
+
+JPH_RMat4 transform;
+JPH_RMat4_Identity(&transform);
+transform.column3.x = 0;
+transform.column3.y = 5;
+transform.column3.z = 0;
+
+JPH_Vec3 direction = {0, 0, 10}; // Cast 10 units forward
+
+JPH_ShapeCastSettings settings;
+JPH_ShapeCastSettings_Init(&settings);
+
+JPH_ShapeCastResult result;
+float closest_fraction = 1.0f;
+
+float shape_cast_callback(void* ctx, const JPH_ShapeCastResult* res) {
+    if (res->fraction < closest_fraction) {
+        closest_fraction = res->fraction;
+        memcpy(&result, res, sizeof(JPH_ShapeCastResult));
+    }
+    return closest_fraction; // Early out
+}
+
+const JPH_NarrowPhaseQuery* query = 
+    JPH_PhysicsSystem_GetNarrowPhaseQuery(physics_system);
+
+JPH_RVec3 baseOffset = {0, 0, 0};
+JPH_NarrowPhaseQuery_CastShape(query, (JPH_Shape*)sphere, &transform,
+    &direction, &settings, &baseOffset, shape_cast_callback, NULL,
+    NULL, NULL, NULL, NULL);
+
+JPH_Shape_Destroy((JPH_Shape*)sphere);
+```
+
+```c Point Test Example
+// Test if a point is inside any body
+JPH_RVec3 test_point = {5.0, 2.0, 3.0};
+
+typedef struct {
+    bool found;
+    JPH_BodyID bodyID;
+} PointTestContext;
+
+float point_callback(void* ctx, const JPH_CollidePointResult* result) {
+    PointTestContext* context = (PointTestContext*)ctx;
+    context->found = true;
+    context->bodyID = result->bodyID;
+    return 0.0f; // Stop on first hit
+}
+
+PointTestContext context = {false, 0};
+const JPH_NarrowPhaseQuery* query = 
+    JPH_PhysicsSystem_GetNarrowPhaseQuery(physics_system);
+
+JPH_NarrowPhaseQuery_CollidePoint(query, &test_point, point_callback,
+    &context, NULL, NULL, NULL, NULL);
+
+if (context.found) {
+    printf("Point is inside body %u\n", context.bodyID);
+}
+```
+</CodeGroup>
+
+## See Also
+
+- [Collision Filters](/api/collision/filters) - Layer and object filtering
+- [Contact Listeners](/api/collision/listeners) - Collision event callbacks
+- [Body Interface](/api/body-interface) - Body manipulation functions

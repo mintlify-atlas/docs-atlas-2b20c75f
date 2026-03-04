@@ -1,0 +1,477 @@
+---
+title: 'Matrices'
+description: 'Matrix operations for transformations and linear algebra'
+---
+
+JoltC provides 4x4 matrix types for representing transformations in 3D space.
+
+## Types
+
+### JPH_Mat4
+
+4x4 matrix with single-precision floating point.
+
+```c
+typedef struct JPH_Mat4 {
+    JPH_Vec4 column[4];
+} JPH_Mat4;
+```
+
+Stored in column-major order.
+
+### JPH_RMat4
+
+Real-precision 4x4 matrix. In single-precision builds, this is the same as `JPH_Mat4`. In double-precision builds (`JPH_DOUBLE_PRECISION`), the translation column uses double precision.
+
+```c
+#if defined(JPH_DOUBLE_PRECISION)
+typedef struct JPH_RMat4 {
+    JPH_Vec4 column[3];
+    JPH_RVec3 column3;
+} JPH_RMat4;
+#else
+typedef JPH_Mat4 JPH_RMat4;
+#endif
+```
+
+## Construction
+
+### JPH_Mat4_Zero
+
+```c
+void JPH_Mat4_Zero(JPH_Mat4* result)
+```
+
+Create a zero matrix (all elements are 0).
+
+### JPH_Mat4_Identity
+
+```c
+void JPH_Mat4_Identity(JPH_Mat4* result)
+```
+
+Create an identity matrix (no transformation).
+
+```c
+JPH_Mat4 identity;
+JPH_Mat4_Identity(&identity);
+// [ 1 0 0 0 ]
+// [ 0 1 0 0 ]
+// [ 0 0 1 0 ]
+// [ 0 0 0 1 ]
+```
+
+### JPH_Mat4_Rotation
+
+```c
+void JPH_Mat4_Rotation(JPH_Mat4* result, const JPH_Quat* rotation)
+```
+
+Create a rotation matrix from a quaternion.
+
+```c
+JPH_Quat rotation = { 0.0f, 0.707f, 0.0f, 0.707f };  // 90° around Y
+JPH_Mat4 matrix;
+JPH_Mat4_Rotation(&matrix, &rotation);
+```
+
+### JPH_Mat4_Rotation2
+
+```c
+void JPH_Mat4_Rotation2(JPH_Mat4* result, const JPH_Vec3* axis, float angle)
+```
+
+Create a rotation matrix from an axis and angle.
+
+<ParamField path="axis" type="const JPH_Vec3*">
+  Rotation axis (should be normalized)
+</ParamField>
+
+<ParamField path="angle" type="float">
+  Rotation angle in radians
+</ParamField>
+
+```c
+JPH_Vec3 yAxis = { 0.0f, 1.0f, 0.0f };
+float angle = JPH_M_PI / 2.0f;  // 90 degrees
+JPH_Mat4 matrix;
+JPH_Mat4_Rotation2(&matrix, &yAxis, angle);
+```
+
+### JPH_Mat4_Translation
+
+```c
+void JPH_Mat4_Translation(JPH_Mat4* result, const JPH_Vec3* translation)
+```
+
+Create a translation matrix.
+
+```c
+JPH_Vec3 offset = { 10.0f, 0.0f, 5.0f };
+JPH_Mat4 matrix;
+JPH_Mat4_Translation(&matrix, &offset);
+```
+
+### JPH_Mat4_RotationTranslation
+
+```c
+void JPH_Mat4_RotationTranslation(
+    JPH_Mat4* result,
+    const JPH_Quat* rotation,
+    const JPH_Vec3* translation
+)
+```
+
+Create a combined rotation and translation matrix.
+
+```c
+JPH_Quat rotation = { 0.0f, 0.707f, 0.0f, 0.707f };
+JPH_Vec3 translation = { 10.0f, 0.0f, 5.0f };
+JPH_Mat4 transform;
+JPH_Mat4_RotationTranslation(&transform, &rotation, &translation);
+```
+
+### JPH_Mat4_InverseRotationTranslation
+
+```c
+void JPH_Mat4_InverseRotationTranslation(
+    JPH_Mat4* result,
+    const JPH_Quat* rotation,
+    const JPH_Vec3* translation
+)
+```
+
+Create the inverse of a rotation-translation matrix.
+
+### JPH_Mat4_Scale
+
+```c
+void JPH_Mat4_Scale(JPH_Mat4* result, const JPH_Vec3* scale)
+```
+
+Create a scaling matrix.
+
+```c
+JPH_Vec3 scale = { 2.0f, 1.0f, 2.0f };  // Scale 2x in X and Z
+JPH_Mat4 scaleMatrix;
+JPH_Mat4_Scale(&scaleMatrix, &scale);
+```
+
+## Arithmetic Operations
+
+### JPH_Mat4_Add
+
+```c
+void JPH_Mat4_Add(const JPH_Mat4* m1, const JPH_Mat4* m2, JPH_Mat4* result)
+```
+
+Add two matrices element-wise.
+
+### JPH_Mat4_Subtract
+
+```c
+void JPH_Mat4_Subtract(const JPH_Mat4* m1, const JPH_Mat4* m2, JPH_Mat4* result)
+```
+
+Subtract m2 from m1 element-wise.
+
+### JPH_Mat4_Multiply
+
+```c
+void JPH_Mat4_Multiply(const JPH_Mat4* m1, const JPH_Mat4* m2, JPH_Mat4* result)
+```
+
+Multiply two matrices (matrix multiplication).
+
+```c
+JPH_Mat4 rotation, translation, combined;
+JPH_Mat4_Rotation(&rotation, &quat);
+JPH_Mat4_Translation(&translation, &offset);
+JPH_Mat4_Multiply(&translation, &rotation, &combined);
+// First rotates, then translates
+```
+
+### JPH_Mat4_MultiplyScalar
+
+```c
+void JPH_Mat4_MultiplyScalar(const JPH_Mat4* m, float scalar, JPH_Mat4* result)
+```
+
+Multiply all matrix elements by a scalar.
+
+## Transformation
+
+### JPH_Mat4_Transposed
+
+```c
+void JPH_Mat4_Transposed(const JPH_Mat4* m, JPH_Mat4* result)
+```
+
+Transpose a matrix (swap rows and columns).
+
+### JPH_Mat4_Inversed
+
+```c
+void JPH_Mat4_Inversed(const JPH_Mat4* matrix, JPH_Mat4* result)
+```
+
+Calculate the inverse of a matrix.
+
+```c
+JPH_Mat4 transform, inverse;
+JPH_Mat4_RotationTranslation(&transform, &rotation, &translation);
+JPH_Mat4_Inversed(&transform, &inverse);
+// inverse transforms back to original space
+```
+
+## Extraction
+
+### JPH_Mat4_GetAxisX / Y / Z
+
+```c
+void JPH_Mat4_GetAxisX(const JPH_Mat4* matrix, JPH_Vec3* result)
+void JPH_Mat4_GetAxisY(const JPH_Mat4* matrix, JPH_Vec3* result)
+void JPH_Mat4_GetAxisZ(const JPH_Mat4* matrix, JPH_Vec3* result)
+```
+
+Extract the basis vectors from a transformation matrix.
+
+```c
+JPH_Mat4 transform;
+JPH_Vec3 right, up, forward;
+JPH_Mat4_GetAxisX(&transform, &right);     // Local X axis (right)
+JPH_Mat4_GetAxisY(&transform, &up);        // Local Y axis (up)
+JPH_Mat4_GetAxisZ(&transform, &forward);   // Local Z axis (forward)
+```
+
+### JPH_Mat4_GetTranslation
+
+```c
+void JPH_Mat4_GetTranslation(const JPH_Mat4* matrix, JPH_Vec3* result)
+```
+
+Extract the translation component from a transformation matrix.
+
+```c
+JPH_Mat4 transform;
+JPH_Vec3 position;
+JPH_Mat4_GetTranslation(&transform, &position);
+```
+
+### JPH_Mat4_GetQuaternion
+
+```c
+void JPH_Mat4_GetQuaternion(const JPH_Mat4* matrix, JPH_Quat* result)
+```
+
+Extract the rotation as a quaternion from a transformation matrix.
+
+```c
+JPH_Mat4 transform;
+JPH_Quat rotation;
+JPH_Mat4_GetQuaternion(&transform, &rotation);
+```
+
+## RMat4 Functions (Double Precision)
+
+When `JPH_DOUBLE_PRECISION` is defined, these functions operate on double-precision matrices:
+
+### JPH_RMat4_Zero
+
+```c
+void JPH_RMat4_Zero(JPH_RMat4* result)
+```
+
+### JPH_RMat4_Identity
+
+```c
+void JPH_RMat4_Identity(JPH_RMat4* result)
+```
+
+### JPH_RMat4_Rotation
+
+```c
+void JPH_RMat4_Rotation(JPH_RMat4* result, const JPH_Quat* rotation)
+```
+
+### JPH_RMat4_Translation
+
+```c
+void JPH_RMat4_Translation(JPH_RMat4* result, const JPH_RVec3* translation)
+```
+
+### JPH_RMat4_RotationTranslation
+
+```c
+void JPH_RMat4_RotationTranslation(
+    JPH_RMat4* result,
+    const JPH_Quat* rotation,
+    const JPH_RVec3* translation
+)
+```
+
+### JPH_RMat4_InverseRotationTranslation
+
+```c
+void JPH_RMat4_InverseRotationTranslation(
+    JPH_RMat4* result,
+    const JPH_Quat* rotation,
+    const JPH_RVec3* translation
+)
+```
+
+### JPH_RMat4_Scale
+
+```c
+void JPH_RMat4_Scale(JPH_RMat4* result, const JPH_Vec3* scale)
+```
+
+### JPH_RMat4_Inversed
+
+```c
+void JPH_RMat4_Inversed(const JPH_RMat4* m, JPH_RMat4* result)
+```
+
+## Example Usage
+
+### Basic Transformation
+
+```c
+// Create a transformation matrix
+JPH_Quat rotation;
+JPH_Vec3 yAxis = { 0.0f, 1.0f, 0.0f };
+float angle = 45.0f * (JPH_M_PI / 180.0f);
+JPH_Vec3 eulerAngles = { 0.0f, angle, 0.0f };
+JPH_Quat_FromEulerAngles(&eulerAngles, &rotation);
+
+JPH_Vec3 translation = { 10.0f, 5.0f, 0.0f };
+
+JPH_Mat4 transform;
+JPH_Mat4_RotationTranslation(&transform, &rotation, &translation);
+
+// Transform a point
+JPH_Vec3 point = { 1.0f, 0.0f, 0.0f };
+JPH_Vec3 transformedPoint;
+JPH_Vec3_MultiplyMatrix(&transform, &point, &transformedPoint);
+```
+
+### Hierarchy Transformations
+
+```c
+// Parent transform (e.g., character body)
+JPH_Quat parentRot;
+JPH_Vec3 parentPos = { 0.0f, 0.0f, 0.0f };
+JPH_Quat_FromEulerAngles(&(JPH_Vec3){ 0.0f, 0.785f, 0.0f }, &parentRot);
+
+JPH_Mat4 parentTransform;
+JPH_Mat4_RotationTranslation(&parentTransform, &parentRot, &parentPos);
+
+// Child transform (e.g., weapon in hand)
+JPH_Quat childRot;
+JPH_Vec3 childPos = { 1.0f, 1.5f, 0.5f };  // Offset from parent
+JPH_Quat_FromEulerAngles(&(JPH_Vec3){ 0.0f, 0.0f, 0.0f }, &childRot);
+
+JPH_Mat4 childLocalTransform;
+JPH_Mat4_RotationTranslation(&childLocalTransform, &childRot, &childPos);
+
+// Combine to get world transform
+JPH_Mat4 childWorldTransform;
+JPH_Mat4_Multiply(&parentTransform, &childLocalTransform, &childWorldTransform);
+
+// Extract world position of child
+JPH_Vec3 childWorldPos;
+JPH_Mat4_GetTranslation(&childWorldTransform, &childWorldPos);
+```
+
+### Camera View Matrix
+
+```c
+// Camera position and orientation
+JPH_Vec3 cameraPos = { 0.0f, 10.0f, -20.0f };
+JPH_Quat cameraRot;
+JPH_Vec3 eulerAngles = { -0.349f, 0.0f, 0.0f };  // Looking down 20°
+JPH_Quat_FromEulerAngles(&eulerAngles, &cameraRot);
+
+// Create view matrix (inverse of camera transform)
+JPH_Mat4 viewMatrix;
+JPH_Mat4_InverseRotationTranslation(&viewMatrix, &cameraRot, &cameraPos);
+
+// Transform world point to view space
+JPH_Vec3 worldPoint = { 0.0f, 0.0f, 0.0f };
+JPH_Vec3 viewPoint;
+JPH_Vec3_MultiplyMatrix(&viewMatrix, &worldPoint, &viewPoint);
+```
+
+### Extracting Transformation Components
+
+```c
+JPH_Mat4 transform;
+// ... transform is set from somewhere ...
+
+// Extract position
+JPH_Vec3 position;
+JPH_Mat4_GetTranslation(&transform, &position);
+
+// Extract rotation as quaternion
+JPH_Quat rotation;
+JPH_Mat4_GetQuaternion(&transform, &rotation);
+
+// Extract basis vectors
+JPH_Vec3 right, up, forward;
+JPH_Mat4_GetAxisX(&transform, &right);
+JPH_Mat4_GetAxisY(&transform, &up);
+JPH_Mat4_GetAxisZ(&transform, &forward);
+
+printf("Position: (%f, %f, %f)\n", position.x, position.y, position.z);
+printf("Forward: (%f, %f, %f)\n", forward.x, forward.y, forward.z);
+```
+
+### Inverse Transform
+
+```c
+// Object transform in world space
+JPH_Mat4 worldTransform;
+JPH_Mat4_RotationTranslation(&worldTransform, &rotation, &position);
+
+// Get inverse to transform from world to object space
+JPH_Mat4 inverseTransform;
+JPH_Mat4_Inversed(&worldTransform, &inverseTransform);
+
+// Transform world point to object space
+JPH_Vec3 worldPoint = { 5.0f, 3.0f, 7.0f };
+JPH_Vec3 objectSpacePoint;
+JPH_Vec3_MultiplyMatrix(&inverseTransform, &worldPoint, &objectSpacePoint);
+```
+
+### Scaling Transform
+
+```c
+// Create scaled object
+JPH_Vec3 scale = { 2.0f, 1.0f, 3.0f };
+JPH_Mat4 scaleMatrix;
+JPH_Mat4_Scale(&scaleMatrix, &scale);
+
+JPH_Mat4 rotationMatrix;
+JPH_Mat4_Rotation(&rotationMatrix, &rotation);
+
+JPH_Mat4 translationMatrix;
+JPH_Mat4_Translation(&translationMatrix, &position);
+
+// Combine: Scale -> Rotate -> Translate (TRS order)
+JPH_Mat4 temp, finalTransform;
+JPH_Mat4_Multiply(&rotationMatrix, &scaleMatrix, &temp);
+JPH_Mat4_Multiply(&translationMatrix, &temp, &finalTransform);
+```
+
+## Notes
+
+- Matrices are stored in column-major order
+- Matrix multiplication is not commutative: `A * B ≠ B * A`
+- For transformation matrices, multiplication order is right-to-left: `T * R * S` applies scale, then rotation, then translation
+- Use `JPH_RMat4` functions when working with large-scale worlds in double-precision builds
+- The inverse of a rotation-translation matrix can be computed more efficiently using `JPH_Mat4_InverseRotationTranslation`
+
+## See Also
+
+- [Vectors](/api/math/vectors) - Vector operations
+- [Quaternions](/api/math/quaternions) - Rotation representation

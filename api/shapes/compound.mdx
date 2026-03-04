@@ -1,0 +1,429 @@
+---
+title: Compound Shapes
+description: API reference for JoltC compound shape creation and manipulation
+---
+
+Compound shapes allow you to combine multiple shapes into a single collision shape. JoltC provides two types:
+
+- **Static Compound Shape**: Optimized for shapes that don't change. More efficient but immutable.
+- **Mutable Compound Shape**: Allows adding/removing sub-shapes at runtime. Slightly less efficient.
+
+## Static Compound Shape
+
+### JPH_StaticCompoundShapeSettings_Create
+
+Creates settings for a static compound shape.
+
+```c
+JPH_StaticCompoundShapeSettings* JPH_StaticCompoundShapeSettings_Create(void);
+```
+
+**Returns:** A pointer to new static compound shape settings
+
+**Example:**
+```c
+JPH_StaticCompoundShapeSettings* settings = JPH_StaticCompoundShapeSettings_Create();
+```
+
+### JPH_CompoundShapeSettings_AddShape
+
+Adds a shape to the compound using shape settings.
+
+```c
+void JPH_CompoundShapeSettings_AddShape(
+    JPH_CompoundShapeSettings* settings,
+    const JPH_Vec3* position,
+    const JPH_Quat* rotation,
+    const JPH_ShapeSettings* shapeSettings,
+    uint32_t userData
+);
+```
+
+<ParamField path="settings" type="JPH_CompoundShapeSettings*">
+  The compound shape settings (can be static or mutable)
+</ParamField>
+
+<ParamField path="position" type="const JPH_Vec3*">
+  Local position offset of the sub-shape
+</ParamField>
+
+<ParamField path="rotation" type="const JPH_Quat*">
+  Local rotation of the sub-shape
+</ParamField>
+
+<ParamField path="shapeSettings" type="const JPH_ShapeSettings*">
+  Settings for the shape to add
+</ParamField>
+
+<ParamField path="userData" type="uint32_t">
+  User data to associate with this sub-shape
+</ParamField>
+
+### JPH_CompoundShapeSettings_AddShape2
+
+Adds an already-created shape to the compound.
+
+```c
+void JPH_CompoundShapeSettings_AddShape2(
+    JPH_CompoundShapeSettings* settings,
+    const JPH_Vec3* position,
+    const JPH_Quat* rotation,
+    const JPH_Shape* shape,
+    uint32_t userData
+);
+```
+
+<ParamField path="settings" type="JPH_CompoundShapeSettings*">
+  The compound shape settings (can be static or mutable)
+</ParamField>
+
+<ParamField path="position" type="const JPH_Vec3*">
+  Local position offset of the sub-shape
+</ParamField>
+
+<ParamField path="rotation" type="const JPH_Quat*">
+  Local rotation of the sub-shape
+</ParamField>
+
+<ParamField path="shape" type="const JPH_Shape*">
+  The shape to add
+</ParamField>
+
+<ParamField path="userData" type="uint32_t">
+  User data to associate with this sub-shape
+</ParamField>
+
+**Example:**
+```c
+JPH_StaticCompoundShapeSettings* settings = JPH_StaticCompoundShapeSettings_Create();
+
+// Add a box at the center
+JPH_Vec3 boxHalf = {1.0f, 0.5f, 0.25f};
+JPH_BoxShape* box = JPH_BoxShape_Create(&boxHalf, JPH_DEFAULT_CONVEX_RADIUS);
+JPH_Vec3 boxPos = {0, 0, 0};
+JPH_Quat boxRot = {0, 0, 0, 1};
+JPH_CompoundShapeSettings_AddShape2(settings, &boxPos, &boxRot, (JPH_Shape*)box, 0);
+
+// Add a sphere offset above
+JPH_SphereShape* sphere = JPH_SphereShape_Create(0.3f);
+JPH_Vec3 spherePos = {0, 1.0f, 0};
+JPH_CompoundShapeSettings_AddShape2(settings, &spherePos, &boxRot, (JPH_Shape*)sphere, 1);
+
+JPH_StaticCompoundShape* compound = JPH_StaticCompoundShape_Create(settings);
+```
+
+### JPH_StaticCompoundShape_Create
+
+Creates a static compound shape from settings.
+
+```c
+JPH_StaticCompoundShape* JPH_StaticCompoundShape_Create(
+    const JPH_StaticCompoundShapeSettings* settings
+);
+```
+
+<ParamField path="settings" type="const JPH_StaticCompoundShapeSettings*">
+  The shape settings with sub-shapes added
+</ParamField>
+
+**Returns:** A pointer to the created static compound shape
+
+## Mutable Compound Shape
+
+### JPH_MutableCompoundShapeSettings_Create
+
+Creates settings for a mutable compound shape.
+
+```c
+JPH_MutableCompoundShapeSettings* JPH_MutableCompoundShapeSettings_Create(void);
+```
+
+**Returns:** A pointer to new mutable compound shape settings
+
+**Example:**
+```c
+JPH_MutableCompoundShapeSettings* settings = JPH_MutableCompoundShapeSettings_Create();
+```
+
+### JPH_MutableCompoundShape_Create
+
+Creates a mutable compound shape from settings.
+
+```c
+JPH_MutableCompoundShape* JPH_MutableCompoundShape_Create(
+    const JPH_MutableCompoundShapeSettings* settings
+);
+```
+
+<ParamField path="settings" type="const JPH_MutableCompoundShapeSettings*">
+  The shape settings with sub-shapes added
+</ParamField>
+
+**Returns:** A pointer to the created mutable compound shape
+
+**Example:**
+```c
+JPH_MutableCompoundShapeSettings* settings = JPH_MutableCompoundShapeSettings_Create();
+
+// Add initial shapes...
+JPH_MutableCompoundShape* compound = JPH_MutableCompoundShape_Create(settings);
+```
+
+### JPH_MutableCompoundShape_AddShape
+
+Adds a sub-shape to an existing mutable compound shape.
+
+```c
+uint32_t JPH_MutableCompoundShape_AddShape(
+    JPH_MutableCompoundShape* shape,
+    const JPH_Vec3* position,
+    const JPH_Quat* rotation,
+    const JPH_Shape* child,
+    uint32_t userData,
+    uint32_t index
+);
+```
+
+<ParamField path="shape" type="JPH_MutableCompoundShape*">
+  The mutable compound shape
+</ParamField>
+
+<ParamField path="position" type="const JPH_Vec3*">
+  Local position offset of the sub-shape
+</ParamField>
+
+<ParamField path="rotation" type="const JPH_Quat*">
+  Local rotation of the sub-shape
+</ParamField>
+
+<ParamField path="child" type="const JPH_Shape*">
+  The shape to add
+</ParamField>
+
+<ParamField path="userData" type="uint32_t">
+  User data to associate with this sub-shape
+</ParamField>
+
+<ParamField path="index" type="uint32_t">
+  Index where to insert the shape. Use `UINT32_MAX` to append at the end
+</ParamField>
+
+**Returns:** The index where the shape was added
+
+**Example:**
+```c
+JPH_SphereShape* sphere = JPH_SphereShape_Create(0.5f);
+JPH_Vec3 pos = {2.0f, 0, 0};
+JPH_Quat rot = {0, 0, 0, 1};
+
+uint32_t index = JPH_MutableCompoundShape_AddShape(
+    compound, &pos, &rot, (JPH_Shape*)sphere, 0, UINT32_MAX
+);
+```
+
+### JPH_MutableCompoundShape_RemoveShape
+
+Removes a sub-shape from the compound.
+
+```c
+void JPH_MutableCompoundShape_RemoveShape(
+    JPH_MutableCompoundShape* shape,
+    uint32_t index
+);
+```
+
+<ParamField path="shape" type="JPH_MutableCompoundShape*">
+  The mutable compound shape
+</ParamField>
+
+<ParamField path="index" type="uint32_t">
+  Index of the sub-shape to remove
+</ParamField>
+
+**Example:**
+```c
+JPH_MutableCompoundShape_RemoveShape(compound, 0);
+```
+
+### JPH_MutableCompoundShape_ModifyShape
+
+Modifies the position and rotation of a sub-shape.
+
+```c
+void JPH_MutableCompoundShape_ModifyShape(
+    JPH_MutableCompoundShape* shape,
+    uint32_t index,
+    const JPH_Vec3* position,
+    const JPH_Quat* rotation
+);
+```
+
+<ParamField path="shape" type="JPH_MutableCompoundShape*">
+  The mutable compound shape
+</ParamField>
+
+<ParamField path="index" type="uint32_t">
+  Index of the sub-shape to modify
+</ParamField>
+
+<ParamField path="position" type="const JPH_Vec3*">
+  New local position
+</ParamField>
+
+<ParamField path="rotation" type="const JPH_Quat*">
+  New local rotation
+</ParamField>
+
+**Example:**
+```c
+JPH_Vec3 newPos = {0, 1.0f, 0};
+JPH_Quat newRot = {0, 0, 0, 1};
+JPH_MutableCompoundShape_ModifyShape(compound, 0, &newPos, &newRot);
+```
+
+### JPH_MutableCompoundShape_ModifyShape2
+
+Modifies the position, rotation, and shape of a sub-shape.
+
+```c
+void JPH_MutableCompoundShape_ModifyShape2(
+    JPH_MutableCompoundShape* shape,
+    uint32_t index,
+    const JPH_Vec3* position,
+    const JPH_Quat* rotation,
+    const JPH_Shape* newShape
+);
+```
+
+<ParamField path="shape" type="JPH_MutableCompoundShape*">
+  The mutable compound shape
+</ParamField>
+
+<ParamField path="index" type="uint32_t">
+  Index of the sub-shape to modify
+</ParamField>
+
+<ParamField path="position" type="const JPH_Vec3*">
+  New local position
+</ParamField>
+
+<ParamField path="rotation" type="const JPH_Quat*">
+  New local rotation
+</ParamField>
+
+<ParamField path="newShape" type="const JPH_Shape*">
+  New shape to replace the existing one
+</ParamField>
+
+### JPH_MutableCompoundShape_AdjustCenterOfMass
+
+Adjusts the center of mass of the compound shape.
+
+```c
+void JPH_MutableCompoundShape_AdjustCenterOfMass(JPH_MutableCompoundShape* shape);
+```
+
+<ParamField path="shape" type="JPH_MutableCompoundShape*">
+  The mutable compound shape
+</ParamField>
+
+<Note>
+Call this after adding/removing/modifying sub-shapes to recalculate the center of mass.
+</Note>
+
+## Common Compound Shape Functions
+
+These functions work with both static and mutable compound shapes.
+
+### JPH_CompoundShape_GetNumSubShapes
+
+Gets the number of sub-shapes in the compound.
+
+```c
+uint32_t JPH_CompoundShape_GetNumSubShapes(const JPH_CompoundShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_CompoundShape*">
+  The compound shape (static or mutable)
+</ParamField>
+
+**Returns:** The number of sub-shapes
+
+### JPH_CompoundShape_GetSubShape
+
+Gets information about a specific sub-shape.
+
+```c
+void JPH_CompoundShape_GetSubShape(
+    const JPH_CompoundShape* shape,
+    uint32_t index,
+    const JPH_Shape** subShape,
+    JPH_Vec3* positionCOM,
+    JPH_Quat* rotation,
+    uint32_t* userData
+);
+```
+
+<ParamField path="shape" type="const JPH_CompoundShape*">
+  The compound shape
+</ParamField>
+
+<ParamField path="index" type="uint32_t">
+  Index of the sub-shape
+</ParamField>
+
+<ParamField path="subShape" type="const JPH_Shape**">
+  Output parameter for the sub-shape pointer
+</ParamField>
+
+<ParamField path="positionCOM" type="JPH_Vec3*">
+  Output parameter for the local position (relative to center of mass)
+</ParamField>
+
+<ParamField path="rotation" type="JPH_Quat*">
+  Output parameter for the local rotation
+</ParamField>
+
+<ParamField path="userData" type="uint32_t*">
+  Output parameter for the user data
+</ParamField>
+
+**Example:**
+```c
+uint32_t numShapes = JPH_CompoundShape_GetNumSubShapes(compound);
+for (uint32_t i = 0; i < numShapes; i++) {
+    const JPH_Shape* subShape;
+    JPH_Vec3 pos;
+    JPH_Quat rot;
+    uint32_t userData;
+    
+    JPH_CompoundShape_GetSubShape(compound, i, &subShape, &pos, &rot, &userData);
+    // Process sub-shape...
+}
+```
+
+### JPH_CompoundShape_GetSubShapeIndexFromID
+
+Gets the sub-shape index from a sub-shape ID.
+
+```c
+uint32_t JPH_CompoundShape_GetSubShapeIndexFromID(
+    const JPH_CompoundShape* shape,
+    JPH_SubShapeID id,
+    JPH_SubShapeID* remainder
+);
+```
+
+<ParamField path="shape" type="const JPH_CompoundShape*">
+  The compound shape
+</ParamField>
+
+<ParamField path="id" type="JPH_SubShapeID">
+  The sub-shape ID to look up
+</ParamField>
+
+<ParamField path="remainder" type="JPH_SubShapeID*">
+  Output parameter for remaining bits (for nested compounds)
+</ParamField>
+
+**Returns:** The index of the sub-shape

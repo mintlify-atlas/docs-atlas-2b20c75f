@@ -1,0 +1,512 @@
+---
+title: Raycasting
+description: Perform raycasts, shape casts, and collision queries in JoltC
+---
+
+# Raycasting and Collision Queries
+
+JoltC provides powerful raycasting and collision detection tools for gameplay features like shooting, vision checks, and ground detection.
+
+## Query Types
+
+<CardGroup cols={2}>
+  <Card title="Raycast" icon="lines-leaning">
+    Cast an infinitely thin ray to find intersections
+  </Card>
+  <Card title="Shape Cast" icon="cube">
+    Sweep a 3D shape along a direction
+  </Card>
+  <Card title="Collision Query" icon="circle-dot">
+    Test if shapes overlap at a position
+  </Card>
+  <Card title="Point Query" icon="location-dot">
+    Check if a point is inside any shapes
+  </Card>
+</CardGroup>
+
+## Raycasting
+
+### Basic Raycast
+
+Cast a ray and get the first hit:
+
+```c joltc.h:1971-1976
+JPH_NarrowPhaseQuery* query = JPH_PhysicsSystem_GetNarrowPhaseQuery(system);
+
+JPH_RVec3 origin = { 0.0f, 1.0f, 0.0f };
+JPH_Vec3 direction = { 1.0f, 0.0f, 0.0f };
+JPH_RayCastResult hit;
+
+bool hasHit = JPH_NarrowPhaseQuery_CastRay(
+    query,
+    &origin,
+    &direction,
+    &hit,
+    NULL,  // broadphase filter
+    NULL,  // object layer filter
+    NULL   // body filter
+);
+
+if (hasHit) {
+    printf("Hit body %u at fraction %f\n", hit.bodyID, hit.fraction);
+    
+    // Calculate hit point
+    JPH_RVec3 hitPoint;
+    JPH_RRayCast_GetPointOnRay(&origin, &direction, hit.fraction, &hitPoint);
+}
+```
+
+### Raycast with Settings
+
+Control backface culling and solid treatment:
+
+```c joltc.h:1978-1985
+JPH_RayCastSettings settings;
+settings.backFaceModeTriangles = JPH_BackFaceMode_IgnoreBackFaces;
+settings.backFaceModeConvex = JPH_BackFaceMode_IgnoreBackFaces;
+settings.treatConvexAsSolid = true;  // Ray starting inside returns hit at fraction 0
+
+JPH_RayCastResult hit;
+bool hasHit = JPH_NarrowPhaseQuery_CastRay2(
+    query,
+    &origin,
+    &direction,
+    &settings,
+    MyRayHitCallback,
+    userData,
+    NULL, NULL, NULL, NULL
+);
+```
+
+### Multiple Hits with Callback
+
+Collect all hits along a ray:
+
+<Tabs>
+  <Tab title="Callback Function">
+    ```c joltc.h:686-698
+    typedef struct {
+        int hitCount;
+        JPH_BodyID hitBodies[32];
+        float hitFractions[32];
+    } RaycastContext;
+    
+    static float OnRayHit(void* context, const JPH_RayCastResult* result) {
+        RaycastContext* ctx = (RaycastContext*)context;
+        
+        if (ctx->hitCount < 32) {
+            ctx->hitBodies[ctx->hitCount] = result->bodyID;
+            ctx->hitFractions[ctx->hitCount] = result->fraction;
+            ctx->hitCount++;
+        }
+        
+        // Return 1.0 to continue to end of ray
+        // Return result->fraction to stop at this hit
+        // Return early fraction to stop sooner
+        return 1.0f;
+    }
+    ```
+  </Tab>
+
+  <Tab title="Performing Query">
+    ```c joltc.h:1987-1995
+    RaycastContext ctx = { 0 };
+    
+    JPH_NarrowPhaseQuery_CastRay3(
+        query,
+        &origin,
+        &direction,
+        &settings,
+        JPH_CollisionCollectorType_AllHit,  // Collect all hits
+        OnRayHit,
+        &ctx,
+        NULL, NULL, NULL, NULL
+    );
+    
+    printf("Found %d hits\n", ctx.hitCount);
+    ```
+  </Tab>
+</Tabs>
+
+### Collector Types
+
+```c joltc.h:342-350
+JPH_CollisionCollectorType_AllHit        // All hits in any order
+JPH_CollisionCollectorType_AllHitSorted  // All hits sorted by distance
+JPH_CollisionCollectorType_ClosestHit    // Only closest hit
+JPH_CollisionCollectorType_AnyHit        // Stop at first hit
+```
+
+## Shape Casting
+
+Sweep a shape along a direction to find collisions.
+
+### Basic Shape Cast
+
+```c joltc.h:2035-2044
+// Create shape to cast
+JPH_SphereShape* sphere = JPH_SphereShape_Create(0.5f);
+
+// Setup transform and direction
+JPH_RMat4 startTransform;
+JPH_RMat4_Identity(&startTransform);
+startTransform.column3 = (JPH_RVec3){ 0, 1, 0 };
+
+JPH_Vec3 direction = { 10.0f, 0.0f, 0.0f };
+
+// Configure cast settings
+JPH_ShapeCastSettings settings;
+JPH_ShapeCastSettings_Init(&settings);
+settings.base.activeEdgeMode = JPH_ActiveEdgeMode_CollideOnlyWithActive;
+settings.backFaceModeTriangles = JPH_BackFaceMode_IgnoreBackFaces;
+settings.useShrunkenShapeAndConvexRadius = true;
+settings.returnDeepestPoint = false;
+
+// Perform cast
+JPH_RVec3 baseOffset = { 0, 0, 0 };
+JPH_ShapeCastResult result;
+
+bool hit = JPH_NarrowPhaseQuery_CastShape(
+    query,
+    (const JPH_Shape*)sphere,
+    &startTransform,
+    &direction,
+    &settings,
+    &baseOffset,
+    MyShapeCastCallback,
+    userData,
+    NULL, NULL, NULL, NULL
+);
+```
+
+### Shape Cast Result
+
+```c joltc.h:639-649
+typedef struct JPH_ShapeCastResult {
+    JPH_Vec3       contactPointOn1;      // Contact on cast shape
+    JPH_Vec3       contactPointOn2;      // Contact on hit shape
+    JPH_Vec3       penetrationAxis;      // Separation direction
+    float          penetrationDepth;     // How deep shapes overlap
+    JPH_SubShapeID subShapeID1;
+    JPH_SubShapeID subShapeID2;
+    JPH_BodyID     bodyID2;              // Hit body
+    float          fraction;             // 0-1: how far along direction
+    bool           isBackFaceHit;        // Hit from inside
+} JPH_ShapeCastResult;
+```
+
+## Collision Queries
+
+### Collide Shape
+
+Test if a shape overlaps any bodies at a given position:
+
+```c joltc.h:2014-2023
+JPH_BoxShape* box = JPH_BoxShape_Create(&(JPH_Vec3){1, 1, 1}, 0.0f);
+
+JPH_RMat4 transform;
+JPH_RMat4_Identity(&transform);
+transform.column3 = (JPH_RVec3){ 5, 1, 0 };
+
+JPH_Vec3 scale = { 1, 1, 1 };
+JPH_CollideShapeSettings settings;
+JPH_CollideShapeSettings_Init(&settings);
+
+JPH_RVec3 baseOffset = { 0, 0, 0 };
+
+bool hasCollision = JPH_NarrowPhaseQuery_CollideShape(
+    query,
+    (const JPH_Shape*)box,
+    &scale,
+    &transform,
+    &settings,
+    &baseOffset,
+    MyCollisionCallback,
+    userData,
+    NULL, NULL, NULL, NULL
+);
+```
+
+### Collide Point
+
+Check if a point is inside any bodies:
+
+```c joltc.h:1997-2003
+JPH_RVec3 point = { 5.0f, 1.0f, 0.0f };
+
+JPH_CollidePointResult result;
+bool isInside = JPH_NarrowPhaseQuery_CollidePoint(
+    query,
+    &point,
+    MyPointCollisionCallback,
+    userData,
+    NULL, NULL, NULL, NULL
+);
+```
+
+## Broad Phase Queries
+
+Broad phase queries are faster but less accurate - they only check bounding boxes.
+
+### Broad Phase Raycast
+
+```c joltc.h:1940-1951
+JPH_BroadPhaseQuery* broadPhase = JPH_PhysicsSystem_GetBroadPhaseQuery(system);
+
+JPH_Vec3 rayOrigin = { 0, 1, 0 };
+JPH_Vec3 rayDirection = { 1, 0, 0 };
+
+bool hit = JPH_BroadPhaseQuery_CastRay(
+    broadPhase,
+    &rayOrigin,
+    &rayDirection,
+    MyBroadPhaseCallback,
+    userData,
+    NULL,  // broadphase layer filter
+    NULL   // object layer filter
+);
+```
+
+### Broad Phase Shape Queries
+
+```c joltc.h:1953-1966
+// Test AABB overlap
+JPH_AABox box = {
+    .min = { -1, -1, -1 },
+    .max = { 1, 1, 1 }
+};
+JPH_BroadPhaseQuery_CollideAABox(broadPhase, &box, callback, userData, NULL, NULL);
+
+// Test sphere overlap
+JPH_Vec3 center = { 0, 1, 0 };
+float radius = 2.0f;
+JPH_BroadPhaseQuery_CollideSphere(broadPhase, &center, radius, callback, userData, NULL, NULL);
+
+// Test point
+JPH_Vec3 point = { 5, 1, 0 };
+JPH_BroadPhaseQuery_CollidePoint(broadPhase, &point, callback, userData, NULL, NULL);
+```
+
+## Filtering Results
+
+### Broadphase Layer Filter
+
+```c joltc.h:2156-2162
+static bool ShouldCollideWithLayer(void* userData, JPH_BroadPhaseLayer layer) {
+    // Only collide with moving objects
+    return layer == BroadPhaseLayers::MOVING;
+}
+
+JPH_BroadPhaseLayerFilter_Procs procs = {
+    .ShouldCollide = ShouldCollideWithLayer
+};
+JPH_BroadPhaseLayerFilter_SetProcs(&procs);
+JPH_BroadPhaseLayerFilter* filter = JPH_BroadPhaseLayerFilter_Create(userData);
+```
+
+### Object Layer Filter
+
+```c joltc.h:2165-2171
+static bool ShouldCollideWithObjectLayer(void* userData, JPH_ObjectLayer layer) {
+    // Skip non-moving objects
+    return layer != Layers::NON_MOVING;
+}
+
+JPH_ObjectLayerFilter_Procs procs = {
+    .ShouldCollide = ShouldCollideWithObjectLayer
+};
+JPH_ObjectLayerFilter_SetProcs(&procs);
+JPH_ObjectLayerFilter* filter = JPH_ObjectLayerFilter_Create(userData);
+```
+
+### Body Filter
+
+```c joltc.h:2174-2181
+static bool ShouldCollideWithBody(void* userData, JPH_BodyID bodyID) {
+    // Skip specific body (e.g., the player casting the ray)
+    JPH_BodyID* playerID = (JPH_BodyID*)userData;
+    return bodyID != *playerID;
+}
+
+JPH_BodyFilter_Procs procs = {
+    .ShouldCollide = ShouldCollideWithBody
+};
+JPH_BodyFilter_SetProcs(&procs);
+JPH_BodyFilter* filter = JPH_BodyFilter_Create(&playerBodyID);
+```
+
+### Shape Filter
+
+```c joltc.h:2184-2191
+static bool ShouldCollideWithShape(
+    void* userData,
+    const JPH_Shape* shape2,
+    const JPH_SubShapeID* subShapeID2
+) {
+    // Custom per-shape logic
+    return JPH_Shape_GetUserData(shape2) != IGNORE_FLAG;
+}
+
+JPH_ShapeFilter_Procs procs = {
+    .ShouldCollide = ShouldCollideWithShape
+};
+JPH_ShapeFilter_SetProcs(&procs);
+JPH_ShapeFilter* filter = JPH_ShapeFilter_Create(userData);
+```
+
+## Practical Examples
+
+### Ground Check
+
+```c
+JPH_RVec3 characterPos = { 0, 1, 0 };
+JPH_Vec3 downDir = { 0, -1, 0 };
+
+JPH_RayCastSettings settings;
+settings.backFaceModeTriangles = JPH_BackFaceMode_IgnoreBackFaces;
+settings.backFaceModeConvex = JPH_BackFaceMode_IgnoreBackFaces;
+settings.treatConvexAsSolid = true;
+
+JPH_RayCastResult hit;
+bool onGround = JPH_NarrowPhaseQuery_CastRay(
+    query,
+    &characterPos,
+    &downDir,
+    &hit,
+    NULL, NULL, NULL
+);
+
+if (onGround && hit.fraction < 0.1f) {
+    // Character is on ground (within 0.1 units)
+    JPH_RVec3 groundPoint;
+    JPH_RRayCast_GetPointOnRay(&characterPos, &downDir, hit.fraction, &groundPoint);
+}
+```
+
+### Line of Sight Check
+
+```c
+typedef struct {
+    JPH_BodyID playerID;
+    JPH_BodyID enemyID;
+    bool hasLineOfSight;
+} LineOfSightContext;
+
+static float OnLineOfSightHit(void* context, const JPH_RayCastResult* result) {
+    LineOfSightContext* ctx = (LineOfSightContext*)context;
+    
+    // If we hit the enemy, we have line of sight
+    if (result->bodyID == ctx->enemyID) {
+        ctx->hasLineOfSight = true;
+        return result->fraction;  // Stop here
+    }
+    
+    // If we hit something else, line of sight is blocked
+    if (result->bodyID != ctx->playerID) {
+        ctx->hasLineOfSight = false;
+        return result->fraction;  // Stop here
+    }
+    
+    // Skip player body, continue ray
+    return 1.0f;
+}
+
+// Check line of sight
+LineOfSightContext ctx = {
+    .playerID = playerBodyID,
+    .enemyID = enemyBodyID,
+    .hasLineOfSight = false
+};
+
+JPH_RVec3 playerPos, enemyPos;
+GetBodyPositions(&playerPos, &enemyPos);
+
+JPH_Vec3 direction;
+JPH_Vec3_Subtract((JPH_Vec3*)&enemyPos, (JPH_Vec3*)&playerPos, &direction);
+
+JPH_NarrowPhaseQuery_CastRay3(
+    query,
+    &playerPos,
+    &direction,
+    NULL,
+    JPH_CollisionCollectorType_ClosestHit,
+    OnLineOfSightHit,
+    &ctx,
+    NULL, NULL, NULL, NULL
+);
+
+if (ctx.hasLineOfSight) {
+    // Enemy is visible
+}
+```
+
+### Sphere Overlap Test
+
+```c
+typedef struct {
+    int bodyCount;
+    JPH_BodyID bodies[32];
+} OverlapContext;
+
+static void OnBodyOverlap(void* context, const JPH_BodyID bodyID) {
+    OverlapContext* ctx = (OverlapContext*)context;
+    if (ctx->bodyCount < 32) {
+        ctx->bodies[ctx->bodyCount++] = bodyID;
+    }
+}
+
+// Find all bodies overlapping explosion radius
+JPH_Vec3 explosionCenter = { 10, 1, 5 };
+float explosionRadius = 5.0f;
+
+OverlapContext ctx = { 0 };
+
+JPH_BroadPhaseQuery_CollideSphere(
+    broadPhase,
+    &explosionCenter,
+    explosionRadius,
+    OnBodyOverlap,
+    &ctx,
+    NULL,
+    NULL
+);
+
+// Apply explosion force to all overlapping bodies
+for (int i = 0; i < ctx.bodyCount; i++) {
+    ApplyExplosionForce(ctx.bodies[i], explosionCenter, explosionRadius);
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Choose the Right Query Type">
+    - Use **broad phase** for fast, approximate tests (explosion radius, triggers)
+    - Use **narrow phase** for accurate gameplay (shooting, ground check)
+    - Use **shape casts** instead of raycasts for thick objects
+    - Use **point queries** for simple inside/outside tests
+  </Accordion>
+
+  <Accordion title="Performance Optimization">
+    - Use appropriate collector types (ClosestHit is faster than AllHit)
+    - Return early from callbacks when possible
+    - Use filters to skip unnecessary bodies
+    - Prefer broad phase for large numbers of queries
+    - Cache filters instead of recreating each query
+  </Accordion>
+
+  <Accordion title="Raycast Settings">
+    - Set `treatConvexAsSolid = true` for solid objects
+    - Use `IgnoreBackFaces` for one-way surfaces
+    - Set `returnDeepestPoint = true` for penetration resolution
+    - Use `useShrunkenShapeAndConvexRadius` for accurate shape casts
+  </Accordion>
+
+  <Accordion title="Filtering">
+    - Use broadphase filter to skip entire layers
+    - Use object layer filter for gameplay categories
+    - Use body filter to skip specific bodies (player, etc.)
+    - Use shape filter for fine-grained control
+    - Filters are checked in order: broadphase → object layer → body → shape
+  </Accordion>
+</AccordionGroup>

@@ -1,0 +1,636 @@
+---
+title: Height Field Shape
+description: API reference for JoltC height field terrain shape
+---
+
+Height field shapes are used for efficient terrain representation. They store height samples in a regular grid and are optimized for large-scale terrain.
+
+## Shape Creation
+
+### JPH_HeightFieldShapeSettings_Create
+
+Creates height field shape settings from height samples.
+
+```c
+JPH_HeightFieldShapeSettings* JPH_HeightFieldShapeSettings_Create(
+    const float* samples,
+    const JPH_Vec3* offset,
+    const JPH_Vec3* scale,
+    uint32_t sampleCount,
+    const uint8_t* materialIndices
+);
+```
+
+<ParamField path="samples" type="const float*">
+  Array of height samples. Must be `sampleCount * sampleCount` elements in row-major order
+</ParamField>
+
+<ParamField path="offset" type="const JPH_Vec3*">
+  World-space offset of the height field origin
+</ParamField>
+
+<ParamField path="scale" type="const JPH_Vec3*">
+  Scale factor for each axis (x = horizontal spacing, y = height scale, z = horizontal spacing)
+</ParamField>
+
+<ParamField path="sampleCount" type="uint32_t">
+  Number of samples along each axis (creates a sampleCount × sampleCount grid)
+</ParamField>
+
+<ParamField path="materialIndices" type="const uint8_t*">
+  Optional array of material indices per sample. Can be `NULL` for default material
+</ParamField>
+
+**Returns:** Height field shape settings
+
+**Example:**
+```c
+// Create a 256x256 height field
+#define SAMPLE_COUNT 256
+float* heights = malloc(SAMPLE_COUNT * SAMPLE_COUNT * sizeof(float));
+
+// Fill with procedural terrain
+for (uint32_t z = 0; z < SAMPLE_COUNT; z++) {
+    for (uint32_t x = 0; x < SAMPLE_COUNT; x++) {
+        float fx = (float)x / SAMPLE_COUNT;
+        float fz = (float)z / SAMPLE_COUNT;
+        heights[z * SAMPLE_COUNT + x] = sinf(fx * 10) * cosf(fz * 10) * 5.0f;
+    }
+}
+
+JPH_Vec3 offset = {-128, 0, -128};
+JPH_Vec3 scale = {1.0f, 1.0f, 1.0f};
+
+JPH_HeightFieldShapeSettings* settings = JPH_HeightFieldShapeSettings_Create(
+    heights,
+    &offset,
+    &scale,
+    SAMPLE_COUNT,
+    NULL  // No per-sample materials
+);
+```
+
+### JPH_HeightFieldShapeSettings_CreateShape
+
+Creates a height field shape from settings.
+
+```c
+JPH_HeightFieldShape* JPH_HeightFieldShapeSettings_CreateShape(
+    JPH_HeightFieldShapeSettings* settings
+);
+```
+
+<ParamField path="settings" type="JPH_HeightFieldShapeSettings*">
+  The height field shape settings
+</ParamField>
+
+**Returns:** A pointer to the created height field shape
+
+## Configuration
+
+### JPH_HeightFieldShapeSettings_SetOffset
+
+Sets the world-space offset.
+
+```c
+void JPH_HeightFieldShapeSettings_SetOffset(
+    JPH_HeightFieldShapeSettings* settings,
+    const JPH_Vec3* value
+);
+```
+
+<ParamField path="settings" type="JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+<ParamField path="value" type="const JPH_Vec3*">
+  The offset vector
+</ParamField>
+
+### JPH_HeightFieldShapeSettings_GetOffset
+
+Gets the world-space offset.
+
+```c
+void JPH_HeightFieldShapeSettings_GetOffset(
+    const JPH_HeightFieldShapeSettings* settings,
+    JPH_Vec3* result
+);
+```
+
+<ParamField path="settings" type="const JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+<ParamField path="result" type="JPH_Vec3*">
+  Output parameter for the offset
+</ParamField>
+
+### JPH_HeightFieldShapeSettings_SetScale
+
+Sets the scale factor.
+
+```c
+void JPH_HeightFieldShapeSettings_SetScale(
+    JPH_HeightFieldShapeSettings* settings,
+    const JPH_Vec3* value
+);
+```
+
+<ParamField path="settings" type="JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+<ParamField path="value" type="const JPH_Vec3*">
+  The scale vector (x = horizontal spacing, y = height scale, z = horizontal spacing)
+</ParamField>
+
+### JPH_HeightFieldShapeSettings_GetScale
+
+Gets the scale factor.
+
+```c
+void JPH_HeightFieldShapeSettings_GetScale(
+    const JPH_HeightFieldShapeSettings* settings,
+    JPH_Vec3* result
+);
+```
+
+<ParamField path="settings" type="const JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+<ParamField path="result" type="JPH_Vec3*">
+  Output parameter for the scale
+</ParamField>
+
+### JPH_HeightFieldShapeSettings_SetSampleCount
+
+Sets the number of samples per axis.
+
+```c
+void JPH_HeightFieldShapeSettings_SetSampleCount(
+    JPH_HeightFieldShapeSettings* settings,
+    uint32_t value
+);
+```
+
+<ParamField path="settings" type="JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+<ParamField path="value" type="uint32_t">
+  Number of samples per axis
+</ParamField>
+
+### JPH_HeightFieldShapeSettings_GetSampleCount
+
+Gets the number of samples per axis.
+
+```c
+uint32_t JPH_HeightFieldShapeSettings_GetSampleCount(
+    const JPH_HeightFieldShapeSettings* settings
+);
+```
+
+<ParamField path="settings" type="const JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+**Returns:** Number of samples per axis
+
+### JPH_HeightFieldShapeSettings_SetMinHeightValue
+
+Sets the minimum height value for quantization.
+
+```c
+void JPH_HeightFieldShapeSettings_SetMinHeightValue(
+    JPH_HeightFieldShapeSettings* settings,
+    float value
+);
+```
+
+<ParamField path="settings" type="JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+<ParamField path="value" type="float">
+  Minimum height value
+</ParamField>
+
+### JPH_HeightFieldShapeSettings_GetMinHeightValue
+
+Gets the minimum height value.
+
+```c
+float JPH_HeightFieldShapeSettings_GetMinHeightValue(
+    const JPH_HeightFieldShapeSettings* settings
+);
+```
+
+<ParamField path="settings" type="const JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+**Returns:** Minimum height value
+
+### JPH_HeightFieldShapeSettings_SetMaxHeightValue
+
+Sets the maximum height value for quantization.
+
+```c
+void JPH_HeightFieldShapeSettings_SetMaxHeightValue(
+    JPH_HeightFieldShapeSettings* settings,
+    float value
+);
+```
+
+<ParamField path="settings" type="JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+<ParamField path="value" type="float">
+  Maximum height value
+</ParamField>
+
+### JPH_HeightFieldShapeSettings_GetMaxHeightValue
+
+Gets the maximum height value.
+
+```c
+float JPH_HeightFieldShapeSettings_GetMaxHeightValue(
+    const JPH_HeightFieldShapeSettings* settings
+);
+```
+
+<ParamField path="settings" type="const JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+**Returns:** Maximum height value
+
+### JPH_HeightFieldShapeSettings_SetBlockSize
+
+Sets the block size for spatial partitioning.
+
+```c
+void JPH_HeightFieldShapeSettings_SetBlockSize(
+    JPH_HeightFieldShapeSettings* settings,
+    uint32_t value
+);
+```
+
+<ParamField path="settings" type="JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+<ParamField path="value" type="uint32_t">
+  Block size (typically 2, 4, or 8)
+</ParamField>
+
+### JPH_HeightFieldShapeSettings_GetBlockSize
+
+Gets the block size.
+
+```c
+uint32_t JPH_HeightFieldShapeSettings_GetBlockSize(
+    const JPH_HeightFieldShapeSettings* settings
+);
+```
+
+<ParamField path="settings" type="const JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+**Returns:** Block size
+
+### JPH_HeightFieldShapeSettings_SetBitsPerSample
+
+Sets the number of bits used per height sample for compression.
+
+```c
+void JPH_HeightFieldShapeSettings_SetBitsPerSample(
+    JPH_HeightFieldShapeSettings* settings,
+    uint32_t value
+);
+```
+
+<ParamField path="settings" type="JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+<ParamField path="value" type="uint32_t">
+  Bits per sample (1-8 for compressed, 32 for uncompressed)
+</ParamField>
+
+### JPH_HeightFieldShapeSettings_GetBitsPerSample
+
+Gets the bits per sample.
+
+```c
+uint32_t JPH_HeightFieldShapeSettings_GetBitsPerSample(
+    const JPH_HeightFieldShapeSettings* settings
+);
+```
+
+<ParamField path="settings" type="const JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+**Returns:** Bits per sample
+
+### JPH_HeightFieldShapeSettings_SetActiveEdgeCosThresholdAngle
+
+Sets the active edge threshold angle.
+
+```c
+void JPH_HeightFieldShapeSettings_SetActiveEdgeCosThresholdAngle(
+    JPH_HeightFieldShapeSettings* settings,
+    float value
+);
+```
+
+<ParamField path="settings" type="JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+<ParamField path="value" type="float">
+  Cosine of the threshold angle for active edges
+</ParamField>
+
+### JPH_HeightFieldShapeSettings_GetActiveEdgeCosThresholdAngle
+
+Gets the active edge threshold angle.
+
+```c
+float JPH_HeightFieldShapeSettings_GetActiveEdgeCosThresholdAngle(
+    const JPH_HeightFieldShapeSettings* settings
+);
+```
+
+<ParamField path="settings" type="const JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+**Returns:** Cosine of the threshold angle
+
+## Quantization Helpers
+
+### JPH_HeightFieldShapeSettings_DetermineMinAndMaxSample
+
+Determines the min/max height values and optimal quantization scale.
+
+```c
+void JPH_HeightFieldShapeSettings_DetermineMinAndMaxSample(
+    const JPH_HeightFieldShapeSettings* settings,
+    float* pOutMinValue,
+    float* pOutMaxValue,
+    float* pOutQuantizationScale
+);
+```
+
+<ParamField path="settings" type="const JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+<ParamField path="pOutMinValue" type="float*">
+  Output parameter for minimum height
+</ParamField>
+
+<ParamField path="pOutMaxValue" type="float*">
+  Output parameter for maximum height
+</ParamField>
+
+<ParamField path="pOutQuantizationScale" type="float*">
+  Output parameter for quantization scale
+</ParamField>
+
+### JPH_HeightFieldShapeSettings_CalculateBitsPerSampleForError
+
+Calculates the required bits per sample for a given error threshold.
+
+```c
+uint32_t JPH_HeightFieldShapeSettings_CalculateBitsPerSampleForError(
+    const JPH_HeightFieldShapeSettings* settings,
+    float maxError
+);
+```
+
+<ParamField path="settings" type="const JPH_HeightFieldShapeSettings*">
+  The height field settings
+</ParamField>
+
+<ParamField path="maxError" type="float">
+  Maximum allowable height error in world units
+</ParamField>
+
+**Returns:** Required bits per sample
+
+## Runtime Queries
+
+### JPH_HeightFieldShape_GetSampleCount
+
+Gets the number of samples per axis.
+
+```c
+uint32_t JPH_HeightFieldShape_GetSampleCount(const JPH_HeightFieldShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_HeightFieldShape*">
+  The height field shape
+</ParamField>
+
+**Returns:** Number of samples per axis
+
+### JPH_HeightFieldShape_GetBlockSize
+
+Gets the block size.
+
+```c
+uint32_t JPH_HeightFieldShape_GetBlockSize(const JPH_HeightFieldShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_HeightFieldShape*">
+  The height field shape
+</ParamField>
+
+**Returns:** Block size
+
+### JPH_HeightFieldShape_GetMaterial
+
+Gets the material at a specific grid position.
+
+```c
+const JPH_PhysicsMaterial* JPH_HeightFieldShape_GetMaterial(
+    const JPH_HeightFieldShape* shape,
+    uint32_t x,
+    uint32_t y
+);
+```
+
+<ParamField path="shape" type="const JPH_HeightFieldShape*">
+  The height field shape
+</ParamField>
+
+<ParamField path="x" type="uint32_t">
+  X grid coordinate
+</ParamField>
+
+<ParamField path="y" type="uint32_t">
+  Y grid coordinate
+</ParamField>
+
+**Returns:** The physics material at that position
+
+### JPH_HeightFieldShape_GetPosition
+
+Gets the world-space position at a specific grid coordinate.
+
+```c
+void JPH_HeightFieldShape_GetPosition(
+    const JPH_HeightFieldShape* shape,
+    uint32_t x,
+    uint32_t y,
+    JPH_Vec3* result
+);
+```
+
+<ParamField path="shape" type="const JPH_HeightFieldShape*">
+  The height field shape
+</ParamField>
+
+<ParamField path="x" type="uint32_t">
+  X grid coordinate
+</ParamField>
+
+<ParamField path="y" type="uint32_t">
+  Y grid coordinate
+</ParamField>
+
+<ParamField path="result" type="JPH_Vec3*">
+  Output parameter for the world position
+</ParamField>
+
+### JPH_HeightFieldShape_IsNoCollision
+
+Checks if a grid cell has collision enabled.
+
+```c
+bool JPH_HeightFieldShape_IsNoCollision(
+    const JPH_HeightFieldShape* shape,
+    uint32_t x,
+    uint32_t y
+);
+```
+
+<ParamField path="shape" type="const JPH_HeightFieldShape*">
+  The height field shape
+</ParamField>
+
+<ParamField path="x" type="uint32_t">
+  X grid coordinate
+</ParamField>
+
+<ParamField path="y" type="uint32_t">
+  Y grid coordinate
+</ParamField>
+
+**Returns:** `true` if no collision at this position
+
+### JPH_HeightFieldShape_ProjectOntoSurface
+
+Projects a point onto the height field surface.
+
+```c
+bool JPH_HeightFieldShape_ProjectOntoSurface(
+    const JPH_HeightFieldShape* shape,
+    const JPH_Vec3* localPosition,
+    JPH_Vec3* outSurfacePosition,
+    JPH_SubShapeID* outSubShapeID
+);
+```
+
+<ParamField path="shape" type="const JPH_HeightFieldShape*">
+  The height field shape
+</ParamField>
+
+<ParamField path="localPosition" type="const JPH_Vec3*">
+  Position in local space to project
+</ParamField>
+
+<ParamField path="outSurfacePosition" type="JPH_Vec3*">
+  Output parameter for the projected surface position
+</ParamField>
+
+<ParamField path="outSubShapeID" type="JPH_SubShapeID*">
+  Output parameter for the sub-shape ID of the hit triangle
+</ParamField>
+
+**Returns:** `true` if projection was successful
+
+### JPH_HeightFieldShape_GetMinHeightValue
+
+Gets the minimum height value in the field.
+
+```c
+float JPH_HeightFieldShape_GetMinHeightValue(const JPH_HeightFieldShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_HeightFieldShape*">
+  The height field shape
+</ParamField>
+
+**Returns:** Minimum height value
+
+### JPH_HeightFieldShape_GetMaxHeightValue
+
+Gets the maximum height value in the field.
+
+```c
+float JPH_HeightFieldShape_GetMaxHeightValue(const JPH_HeightFieldShape* shape);
+```
+
+<ParamField path="shape" type="const JPH_HeightFieldShape*">
+  The height field shape
+</ParamField>
+
+**Returns:** Maximum height value
+
+## Complete Example
+
+```c
+// Create a 128x128 terrain with rolling hills
+#define TERRAIN_SIZE 128
+float* heights = malloc(TERRAIN_SIZE * TERRAIN_SIZE * sizeof(float));
+
+for (uint32_t z = 0; z < TERRAIN_SIZE; z++) {
+    for (uint32_t x = 0; x < TERRAIN_SIZE; x++) {
+        float fx = (float)x / TERRAIN_SIZE * 6.28f;
+        float fz = (float)z / TERRAIN_SIZE * 6.28f;
+        heights[z * TERRAIN_SIZE + x] = sinf(fx) * cosf(fz) * 10.0f;
+    }
+}
+
+// Position at origin, 1m grid spacing, scale heights by 1.0
+JPH_Vec3 offset = {-TERRAIN_SIZE / 2.0f, 0, -TERRAIN_SIZE / 2.0f};
+JPH_Vec3 scale = {1.0f, 1.0f, 1.0f};
+
+JPH_HeightFieldShapeSettings* settings = JPH_HeightFieldShapeSettings_Create(
+    heights,
+    &offset,
+    &scale,
+    TERRAIN_SIZE,
+    NULL
+);
+
+// Configure compression
+uint32_t bitsPerSample = JPH_HeightFieldShapeSettings_CalculateBitsPerSampleForError(
+    settings, 0.1f  // 10cm max error
+);
+JPH_HeightFieldShapeSettings_SetBitsPerSample(settings, bitsPerSample);
+
+// Create the shape
+JPH_HeightFieldShape* terrain = JPH_HeightFieldShapeSettings_CreateShape(settings);
+
+free(heights);
+```

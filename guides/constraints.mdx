@@ -1,0 +1,415 @@
+---
+title: Constraints
+description: Connect bodies together with various constraint types in JoltC
+---
+
+# Constraints
+
+Constraints connect two bodies together and restrict their relative motion. JoltC provides many constraint types for different use cases.
+
+## Constraint Types Overview
+
+<CardGroup cols={2}>
+  <Card title="Fixed" icon="link">
+    Welds two bodies together with no relative movement
+  </Card>
+  <Card title="Point" icon="circle-dot">
+    Allows rotation around a shared point
+  </Card>
+  <Card title="Hinge" icon="door-open">
+    Rotation around a single axis (door, wheel)
+  </Card>
+  <Card title="Slider" icon="arrows-left-right">
+    Linear movement along an axis (piston)
+  </Card>
+  <Card title="Distance" icon="ruler">
+    Maintains distance between two points
+  </Card>
+  <Card title="Cone" icon="triangle-exclamation">
+    Limits rotation to a cone shape
+  </Card>
+  <Card title="Swing-Twist" icon="arrows-rotate">
+    Ragdoll joint with twist and swing limits
+  </Card>
+  <Card title="Six DOF" icon="cube">
+    Full control over all 6 degrees of freedom
+  </Card>
+</CardGroup>
+
+## Fixed Constraint
+
+Welds two bodies together with no relative movement.
+
+```c joltc.h:1616-1617
+JPH_FixedConstraintSettings settings;
+JPH_FixedConstraintSettings_Init(&settings);
+
+// Configure attachment points
+settings.space = JPH_ConstraintSpace_WorldSpace;
+settings.point1 = (JPH_RVec3){ 0.0f, 1.0f, 0.0f };
+settings.point2 = (JPH_RVec3){ 0.0f, 0.0f, 0.0f };
+settings.autoDetectPoint = false;
+
+JPH_FixedConstraint* constraint = JPH_FixedConstraint_Create(
+    &settings,
+    body1,
+    body2
+);
+
+JPH_PhysicsSystem_AddConstraint(system, (JPH_Constraint*)constraint);
+```
+
+**Use cases:** Rigid connections, composite objects
+
+## Point Constraint
+
+Bodies share a point but can rotate freely (ball and socket).
+
+```c joltc.h:1634-1635
+JPH_PointConstraintSettings settings;
+JPH_PointConstraintSettings_Init(&settings);
+
+settings.space = JPH_ConstraintSpace_WorldSpace;
+settings.point1 = (JPH_RVec3){ 0.0f, 2.0f, 0.0f };
+settings.point2 = (JPH_RVec3){ 0.0f, 0.0f, 0.0f };
+
+JPH_PointConstraint* constraint = JPH_PointConstraint_Create(
+    &settings,
+    body1,
+    body2
+);
+
+JPH_PhysicsSystem_AddConstraint(system, (JPH_Constraint*)constraint);
+```
+
+**Use cases:** Chains, ragdoll shoulders, wrecking ball
+
+## Hinge Constraint
+
+Allows rotation around a single axis with optional limits and motor.
+
+<Tabs>
+  <Tab title="Basic Hinge">
+    ```c joltc.h:1644-1645
+    JPH_HingeConstraintSettings settings;
+    JPH_HingeConstraintSettings_Init(&settings);
+
+    settings.space = JPH_ConstraintSpace_WorldSpace;
+    settings.point1 = (JPH_RVec3){ 0.0f, 1.0f, 0.0f };
+    settings.point2 = (JPH_RVec3){ 0.0f, 0.0f, 0.0f };
+    settings.hingeAxis1 = (JPH_Vec3){ 1.0f, 0.0f, 0.0f };
+    settings.hingeAxis2 = (JPH_Vec3){ 1.0f, 0.0f, 0.0f };
+    settings.normalAxis1 = (JPH_Vec3){ 0.0f, 1.0f, 0.0f };
+    settings.normalAxis2 = (JPH_Vec3){ 0.0f, 1.0f, 0.0f };
+
+    JPH_HingeConstraint* hinge = JPH_HingeConstraint_Create(
+        &settings,
+        body1,
+        body2
+    );
+    ```
+  </Tab>
+
+  <Tab title="With Limits">
+    ```c joltc.h:1664-1669
+    // Limit rotation range (in radians)
+    JPH_HingeConstraint_SetLimits(
+        hinge,
+        -JPH_M_PI / 2.0f,  // min angle
+        JPH_M_PI / 2.0f    // max angle
+    );
+
+    // Configure spring for soft limits
+    JPH_SpringSettings springSettings;
+    springSettings.mode = JPH_SpringMode_FrequencyAndDamping;
+    springSettings.frequencyOrStiffness = 2.0f;
+    springSettings.damping = 0.5f;
+    JPH_HingeConstraint_SetLimitsSpringSettings(hinge, &springSettings);
+    ```
+  </Tab>
+
+  <Tab title="With Motor">
+    ```c joltc.h:1656-1663
+    // Configure motor
+    JPH_MotorSettings motorSettings;
+    motorSettings.springSettings.mode = JPH_SpringMode_StiffnessAndDamping;
+    motorSettings.springSettings.frequencyOrStiffness = 1000.0f;
+    motorSettings.springSettings.damping = 50.0f;
+    motorSettings.minTorqueLimit = -100.0f;
+    motorSettings.maxTorqueLimit = 100.0f;
+    JPH_HingeConstraint_SetMotorSettings(hinge, &motorSettings);
+
+    // Enable velocity motor
+    JPH_HingeConstraint_SetMotorState(hinge, JPH_MotorState_Velocity);
+    JPH_HingeConstraint_SetTargetAngularVelocity(hinge, 3.14f);
+
+    // Or use position motor
+    JPH_HingeConstraint_SetMotorState(hinge, JPH_MotorState_Position);
+    JPH_HingeConstraint_SetTargetAngle(hinge, JPH_M_PI / 4.0f);
+    ```
+  </Tab>
+</Tabs>
+
+**Use cases:** Doors, wheels, rotating platforms
+
+## Slider Constraint
+
+Allows linear movement along a single axis.
+
+```c joltc.h:1676-1677
+JPH_SliderConstraintSettings settings;
+JPH_SliderConstraintSettings_Init(&settings);
+
+settings.space = JPH_ConstraintSpace_WorldSpace;
+settings.point1 = (JPH_RVec3){ 0.0f, 1.0f, 0.0f };
+settings.point2 = (JPH_RVec3){ 0.0f, 0.0f, 0.0f };
+settings.sliderAxis1 = (JPH_Vec3){ 0.0f, 1.0f, 0.0f };
+settings.sliderAxis2 = (JPH_Vec3){ 0.0f, 1.0f, 0.0f };
+settings.normalAxis1 = (JPH_Vec3){ 1.0f, 0.0f, 0.0f };
+settings.normalAxis2 = (JPH_Vec3){ 1.0f, 0.0f, 0.0f };
+
+JPH_SliderConstraint* slider = JPH_SliderConstraint_Create(
+    &settings,
+    body1,
+    body2
+);
+
+// Set limits
+JPH_SliderConstraint_SetLimits(slider, -1.0f, 1.0f);
+
+// Enable motor
+JPH_SliderConstraint_SetMotorState(slider, JPH_MotorState_Velocity);
+JPH_SliderConstraint_SetTargetVelocity(slider, 2.0f);
+```
+
+**Use cases:** Pistons, elevators, sliding doors
+
+## Distance Constraint
+
+Maintains a distance range between two points.
+
+```c joltc.h:1623-1624
+JPH_DistanceConstraintSettings settings;
+JPH_DistanceConstraintSettings_Init(&settings);
+
+settings.space = JPH_ConstraintSpace_WorldSpace;
+settings.point1 = (JPH_RVec3){ 0.0f, 2.0f, 0.0f };
+settings.point2 = (JPH_RVec3){ 0.0f, 0.0f, 0.0f };
+settings.minDistance = 0.5f;
+settings.maxDistance = 2.0f;
+
+// Optional: soft limits
+settings.limitsSpringSettings.mode = JPH_SpringMode_FrequencyAndDamping;
+settings.limitsSpringSettings.frequencyOrStiffness = 1.0f;
+settings.limitsSpringSettings.damping = 0.1f;
+
+JPH_DistanceConstraint* constraint = JPH_DistanceConstraint_Create(
+    &settings,
+    body1,
+    body2
+);
+```
+
+**Use cases:** Ropes, cables, springs
+
+## Cone Constraint
+
+Limits rotation to within a cone angle.
+
+```c joltc.h:1704-1705
+JPH_ConeConstraintSettings settings;
+JPH_ConeConstraintSettings_Init(&settings);
+
+settings.space = JPH_ConstraintSpace_WorldSpace;
+settings.point1 = (JPH_RVec3){ 0.0f, 1.0f, 0.0f };
+settings.point2 = (JPH_RVec3){ 0.0f, 0.0f, 0.0f };
+settings.twistAxis1 = (JPH_Vec3){ 0.0f, 1.0f, 0.0f };
+settings.twistAxis2 = (JPH_Vec3){ 0.0f, 1.0f, 0.0f };
+settings.halfConeAngle = JPH_M_PI / 4.0f; // 45 degrees
+
+JPH_ConeConstraint* cone = JPH_ConeConstraint_Create(
+    &settings,
+    body1,
+    body2
+);
+```
+
+**Use cases:** Simple ragdoll joints, limited rotation
+
+## Swing-Twist Constraint
+
+Advanced ragdoll joint with separate swing and twist limits.
+
+```c joltc.h:1713-1714
+JPH_SwingTwistConstraintSettings settings;
+JPH_SwingTwistConstraintSettings_Init(&settings);
+
+settings.space = JPH_ConstraintSpace_WorldSpace;
+settings.position1 = (JPH_RVec3){ 0.0f, 1.0f, 0.0f };
+settings.position2 = (JPH_RVec3){ 0.0f, 0.0f, 0.0f };
+settings.twistAxis1 = (JPH_Vec3){ 0.0f, 1.0f, 0.0f };
+settings.twistAxis2 = (JPH_Vec3){ 0.0f, 1.0f, 0.0f };
+settings.planeAxis1 = (JPH_Vec3){ 1.0f, 0.0f, 0.0f };
+settings.planeAxis2 = (JPH_Vec3){ 1.0f, 0.0f, 0.0f };
+
+// Swing limits
+settings.swingType = JPH_SwingType_Cone;
+settings.normalHalfConeAngle = JPH_M_PI / 4.0f;
+settings.planeHalfConeAngle = JPH_M_PI / 3.0f;
+
+// Twist limits
+settings.twistMinAngle = -JPH_M_PI / 6.0f;
+settings.twistMaxAngle = JPH_M_PI / 6.0f;
+
+JPH_SwingTwistConstraint* constraint = JPH_SwingTwistConstraint_Create(
+    &settings,
+    body1,
+    body2
+);
+```
+
+**Use cases:** Ragdoll shoulders, hips, advanced character joints
+
+## Six DOF Constraint
+
+Full control over all 6 degrees of freedom (3 translation + 3 rotation).
+
+```c joltc.h:1724-1725
+JPH_SixDOFConstraintSettings settings;
+JPH_SixDOFConstraintSettings_Init(&settings);
+
+settings.space = JPH_ConstraintSpace_WorldSpace;
+settings.position1 = (JPH_RVec3){ 0.0f, 1.0f, 0.0f };
+settings.position2 = (JPH_RVec3){ 0.0f, 0.0f, 0.0f };
+settings.axisX1 = (JPH_Vec3){ 1.0f, 0.0f, 0.0f };
+settings.axisX2 = (JPH_Vec3){ 1.0f, 0.0f, 0.0f };
+settings.axisY1 = (JPH_Vec3){ 0.0f, 1.0f, 0.0f };
+settings.axisY2 = (JPH_Vec3){ 0.0f, 1.0f, 0.0f };
+
+// Configure axes
+JPH_SixDOFConstraintSettings_MakeFixedAxis(&settings, JPH_SixDOFConstraintAxis_TranslationX);
+JPH_SixDOFConstraintSettings_MakeFixedAxis(&settings, JPH_SixDOFConstraintAxis_TranslationZ);
+JPH_SixDOFConstraintSettings_SetLimitedAxis(&settings, JPH_SixDOFConstraintAxis_TranslationY, -1.0f, 1.0f);
+JPH_SixDOFConstraintSettings_MakeFreeAxis(&settings, JPH_SixDOFConstraintAxis_RotationX);
+
+JPH_SixDOFConstraint* constraint = JPH_SixDOFConstraint_Create(
+    &settings,
+    body1,
+    body2
+);
+```
+
+**Use cases:** Generic constraints, custom joint behavior
+
+## Gear Constraint
+
+Transfers rotation between two hinges with a gear ratio.
+
+```c joltc.h:1764-1765
+JPH_GearConstraintSettings settings;
+JPH_GearConstraintSettings_Init(&settings);
+
+settings.space = JPH_ConstraintSpace_WorldSpace;
+settings.hingeAxis1 = (JPH_Vec3){ 1.0f, 0.0f, 0.0f };
+settings.hingeAxis2 = (JPH_Vec3){ 0.0f, 1.0f, 0.0f };
+settings.ratio = 2.0f; // gear 1 rotates twice as fast
+
+JPH_GearConstraint* gear = JPH_GearConstraint_Create(
+    &settings,
+    body1,
+    body2
+);
+
+// Link to existing hinge constraints
+JPH_GearConstraint_SetConstraints(gear, hinge1, hinge2);
+```
+
+**Use cases:** Gear systems, mechanical linkages
+
+## Managing Constraints
+
+### Adding to Physics System
+
+```c joltc.h:1130-1134
+// Add single constraint
+JPH_PhysicsSystem_AddConstraint(system, constraint);
+
+// Add multiple constraints
+JPH_Constraint* constraints[] = { constraint1, constraint2, constraint3 };
+JPH_PhysicsSystem_AddConstraints(system, constraints, 3);
+```
+
+### Removing Constraints
+
+```c joltc.h:1131-1134
+JPH_PhysicsSystem_RemoveConstraint(system, constraint);
+
+// Remove multiple
+JPH_PhysicsSystem_RemoveConstraints(system, constraints, 3);
+```
+
+### Enable/Disable
+
+```c joltc.h:1597-1598
+// Temporarily disable
+JPH_Constraint_SetEnabled(constraint, false);
+
+// Re-enable
+JPH_Constraint_SetEnabled(constraint, true);
+```
+
+## Common Settings
+
+### Constraint Priority
+
+Higher priority constraints are solved first:
+
+```c joltc.h:1591-1592
+JPH_Constraint_SetConstraintPriority(constraint, 10);
+```
+
+### Solver Iterations
+
+Increase for more accurate but slower solving:
+
+```c joltc.h:1593-1596
+JPH_Constraint_SetNumVelocityStepsOverride(constraint, 8);
+JPH_Constraint_SetNumPositionStepsOverride(constraint, 4);
+```
+
+### User Data
+
+Store custom data with constraints:
+
+```c joltc.h:1599-1600
+JPH_Constraint_SetUserData(constraint, (uint64_t)myData);
+uint64_t data = JPH_Constraint_GetUserData(constraint);
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Choose the Right Constraint">
+    - Use simpler constraints when possible (Fixed instead of Six DOF)
+    - Point constraints are cheaper than hinges
+    - Cone is simpler than Swing-Twist for basic limits
+  </Accordion>
+
+  <Accordion title="Coordinate Spaces">
+    - `JPH_ConstraintSpace_WorldSpace` - Points/axes in world coordinates
+    - `JPH_ConstraintSpace_LocalToBodyCOM` - Relative to body center of mass
+    - World space is easier for setup, local space moves with bodies
+  </Accordion>
+
+  <Accordion title="Motor Settings">
+    - Start with low stiffness and damping, increase gradually
+    - Set force/torque limits to prevent instability
+    - Use `JPH_MotorState_Off` when motor not needed
+  </Accordion>
+
+  <Accordion title="Performance">
+    - Minimize constraint count when possible
+    - Use appropriate solver iterations (don't over-solve)
+    - Disable constraints that aren't actively needed
+  </Accordion>
+</AccordionGroup>

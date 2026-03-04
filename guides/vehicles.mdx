@@ -1,0 +1,576 @@
+---
+title: Vehicle Physics
+description: Create realistic wheeled and tracked vehicles in JoltC
+---
+
+# Vehicle Physics
+
+JoltC provides a comprehensive vehicle physics system with support for wheeled vehicles, motorcycles, and tracked vehicles.
+
+## Vehicle Types
+
+<CardGroup cols={3}>
+  <Card title="Wheeled Vehicle" icon="car">
+    Cars, trucks with 4+ wheels and differential
+  </Card>
+  <Card title="Motorcycle" icon="motorcycle">
+    Two-wheeled vehicles with lean mechanics
+  </Card>
+  <Card title="Tracked Vehicle" icon="tank-water">
+    Tanks and construction vehicles with tracks
+  </Card>
+</CardGroup>
+
+## Creating a Wheeled Vehicle
+
+<Steps>
+  <Step title="Create vehicle body">
+    First, create a rigid body for the vehicle chassis:
+
+    ```c
+    // Vehicle body shape
+    JPH_Vec3 bodyHalfExtent = { 2.0f, 0.5f, 1.0f };
+    JPH_BoxShape* bodyShape = JPH_BoxShape_Create(&bodyHalfExtent, 0.05f);
+    
+    // Body creation settings
+    JPH_RVec3 position = { 0, 2, 0 };
+    JPH_BodyCreationSettings* bodySettings = JPH_BodyCreationSettings_Create3(
+        (const JPH_Shape*)bodyShape,
+        &position,
+        NULL,
+        JPH_MotionType_Dynamic,
+        Layers::MOVING
+    );
+    
+    // Override mass
+    JPH_BodyCreationSettings_SetOverrideMassProperties(
+        bodySettings,
+        JPH_OverrideMassProperties_MassAndInertiaProvided
+    );
+    JPH_MassProperties massProps;
+    massProps.mass = 1500.0f;  // 1.5 ton vehicle
+    JPH_BodyCreationSettings_SetMassPropertiesOverride(bodySettings, &massProps);
+    
+    // Create body
+    JPH_Body* vehicleBody = JPH_BodyInterface_CreateBody(bodyInterface, bodySettings);
+    JPH_BodyCreationSettings_Destroy(bodySettings);
+    ```
+  </Step>
+
+  <Step title="Configure wheel settings">
+    Create settings for each wheel:
+
+    ```c joltc.h:2767-2794
+    JPH_WheelSettings* CreateWheelSettings(
+        JPH_Vec3 position,
+        float radius,
+        float width
+    ) {
+        JPH_WheelSettings* wheel = JPH_WheelSettings_Create();
+        
+        // Wheel position relative to vehicle body
+        JPH_WheelSettings_SetPosition(wheel, &position);
+        JPH_WheelSettings_SetRadius(wheel, radius);
+        JPH_WheelSettings_SetWidth(wheel, width);
+        
+        // Suspension
+        JPH_Vec3 suspensionDir = { 0, -1, 0 };  // Down
+        JPH_WheelSettings_SetSuspensionDirection(wheel, &suspensionDir);
+        JPH_WheelSettings_SetSuspensionMinLength(wheel, 0.3f);
+        JPH_WheelSettings_SetSuspensionMaxLength(wheel, 0.5f);
+        JPH_WheelSettings_SetSuspensionPreloadLength(wheel, 0.0f);
+        
+        // Spring settings
+        JPH_SpringSettings spring;
+        spring.mode = JPH_SpringMode_FrequencyAndDamping;
+        spring.frequencyOrStiffness = 1.5f;
+        spring.damping = 0.5f;
+        JPH_WheelSettings_SetSuspensionSpring(wheel, &spring);
+        
+        // Steering and orientation
+        JPH_Vec3 steeringAxis = { 0, 1, 0 };
+        JPH_WheelSettings_SetSteeringAxis(wheel, &steeringAxis);
+        
+        JPH_Vec3 wheelUp = { 0, 1, 0 };
+        JPH_WheelSettings_SetWheelUp(wheel, &wheelUp);
+        
+        JPH_Vec3 wheelForward = { 0, 0, 1 };
+        JPH_WheelSettings_SetWheelForward(wheel, &wheelForward);
+        
+        return wheel;
+    }
+    
+    // Create 4 wheels (front-left, front-right, rear-left, rear-right)
+    JPH_WheelSettings* wheels[4];
+    wheels[0] = CreateWheelSettings((JPH_Vec3){ -1.5f, -0.3f, 1.0f }, 0.3f, 0.1f);
+    wheels[1] = CreateWheelSettings((JPH_Vec3){ 1.5f, -0.3f, 1.0f }, 0.3f, 0.1f);
+    wheels[2] = CreateWheelSettings((JPH_Vec3){ -1.5f, -0.3f, -1.0f }, 0.3f, 0.1f);
+    wheels[3] = CreateWheelSettings((JPH_Vec3){ 1.5f, -0.3f, -1.0f }, 0.3f, 0.1f);
+    ```
+  </Step>
+
+  <Step title="Create vehicle constraint">
+    ```c joltc.h:2741-2743
+    JPH_VehicleConstraintSettings settings;
+    JPH_VehicleConstraintSettings_Init(&settings);
+    
+    // Assign wheels
+    settings.wheels = wheels;
+    settings.wheelsCount = 4;
+    
+    // Configure controller (WheeledVehicle)
+    JPH_WheeledVehicleControllerSettings* controllerSettings = 
+        JPH_WheeledVehicleControllerSettings_Create();
+    settings.controller = (JPH_VehicleControllerSettings*)controllerSettings;
+    
+    // Anti-roll bars (reduce body roll)
+    JPH_VehicleAntiRollBar antiRollBars[1];
+    antiRollBars[0].leftWheel = 0;   // Front-left
+    antiRollBars[0].rightWheel = 1;  // Front-right
+    antiRollBars[0].stiffness = 10000.0f;
+    settings.antiRollBars = antiRollBars;
+    settings.antiRollBarsCount = 1;
+    
+    // Create constraint
+    JPH_VehicleConstraint* vehicle = JPH_VehicleConstraint_Create(
+        vehicleBody,
+        &settings
+    );
+    
+    // Add as step listener
+    JPH_PhysicsStepListener* stepListener = 
+        JPH_VehicleConstraint_AsPhysicsStepListener(vehicle);
+    JPH_PhysicsSystem_AddStepListener(system, stepListener);
+    
+    // Add body to world
+    JPH_BodyInterface_AddBody(bodyInterface, JPH_Body_GetID(vehicleBody), JPH_Activation_Activate);
+    ```
+  </Step>
+</Steps>
+
+## Engine and Transmission
+
+### Engine Configuration
+
+```c joltc.h:2723-2730
+JPH_VehicleEngineSettings engineSettings = {
+    .maxTorque = 500.0f,           // Nm
+    .minRPM = 1000.0f,
+    .maxRPM = 6000.0f,
+    .inertia = 0.5f,
+    .angularDamping = 0.2f
+};
+
+// Set engine curve (torque vs RPM)
+// engineSettings.normalizedTorque = torqueCurve;
+```
+
+### Transmission Settings
+
+```c joltc.h:2732-2739
+JPH_VehicleTransmissionSettings transmissionSettings = {
+    .mode = JPH_TransmissionMode_Auto,
+    .gearRatios = { 2.66f, 1.78f, 1.30f, 1.00f, 0.74f },  // Forward gears
+    .gearRatiosCount = 5,
+    .reverseGearRatios = { -2.90f },
+    .reverseGearRatiosCount = 1,
+    .switchTime = 0.5f,
+    .clutchStrength = 10.0f,
+    .switchLatency = 0.2f,
+    .shiftUpRPM = 4500.0f,
+    .shiftDownRPM = 2000.0f
+};
+```
+
+### Differential
+
+```c joltc.h:2732-2739
+JPH_VehicleDifferentialSettings differentialSettings = {
+    .leftWheel = 2,      // Rear-left wheel index
+    .rightWheel = 3,     // Rear-right wheel index
+    .differentialRatio = 3.42f,
+    .leftRightSplit = 0.5f,  // 50/50 power distribution
+    .limitedSlipRatio = 1.4f,
+    .engineTorqueRatio = 1.0f
+};
+```
+
+## Controlling the Vehicle
+
+### Basic Controls
+
+```c
+// Get controller
+JPH_WheeledVehicleController* controller = 
+    (JPH_WheeledVehicleController*)JPH_VehicleConstraint_GetController(vehicle);
+
+// Forward/Reverse (0 = neutral, 1 = full throttle)
+float forward = GetThrottleInput();  // 0-1
+JPH_WheeledVehicleController_SetDriverInput(
+    controller,
+    forward,
+    0.0f,  // brake
+    0.0f,  // handbrake
+    0.0f   // steering
+);
+
+// Steering (-1 = full left, 1 = full right)
+float steering = GetSteeringInput();
+JPH_WheeledVehicleController_SetDriverInput(
+    controller,
+    0.0f,
+    0.0f,
+    0.0f,
+    steering
+);
+
+// Braking
+float brake = GetBrakeInput();  // 0-1
+JPH_WheeledVehicleController_SetDriverInput(
+    controller,
+    0.0f,
+    brake,
+    0.0f,
+    0.0f
+);
+
+// Handbrake (rear wheels only, usually)
+float handbrake = GetHandbrakeInput();
+JPH_WheeledVehicleController_SetDriverInput(
+    controller,
+    0.0f,
+    0.0f,
+    handbrake,
+    0.0f
+);
+```
+
+### Getting Vehicle State
+
+```c joltc.h:2758-2764
+// Get vehicle forward/up directions
+JPH_Vec3 forward, up;
+JPH_VehicleConstraint_GetLocalForward(vehicle, &forward);
+JPH_VehicleConstraint_GetLocalUp(vehicle, &up);
+
+// Get wheel states
+uint32_t wheelCount = JPH_VehicleConstraint_GetWheelsCount(vehicle);
+for (uint32_t i = 0; i < wheelCount; i++) {
+    JPH_Wheel* wheel = JPH_VehicleConstraint_GetWheel(vehicle, i);
+    
+    // Wheel rotation
+    float angle = JPH_Wheel_GetRotationAngle(wheel);
+    float angularVelocity = JPH_Wheel_GetAngularVelocity(wheel);
+    
+    // Steering angle
+    float steerAngle = JPH_Wheel_GetSteerAngle(wheel);
+    
+    // Contact
+    if (JPH_Wheel_HasContact(wheel)) {
+        JPH_RVec3 contactPos;
+        JPH_Wheel_GetContactPosition(wheel, &contactPos);
+        
+        JPH_Vec3 contactNormal;
+        JPH_Wheel_GetContactNormal(wheel, &contactNormal);
+        
+        float suspensionLength = JPH_Wheel_GetSuspensionLength(wheel);
+    }
+}
+```
+
+## Collision Testing
+
+Vehicles need collision testers to detect ground:
+
+```c
+// Ray-based collision (fastest)
+JPH_VehicleCollisionTesterRay* rayTester = 
+    JPH_VehicleCollisionTesterRay_Create(
+        objectLayer,
+        physicsSystem
+    );
+JPH_VehicleConstraint_SetVehicleCollisionTester(
+    vehicle,
+    (JPH_VehicleCollisionTester*)rayTester
+);
+
+// Sphere cast (more accurate)
+JPH_VehicleCollisionTesterCastSphere* sphereTester = 
+    JPH_VehicleCollisionTesterCastSphere_Create(
+        objectLayer,
+        0.1f,  // sphere radius
+        physicsSystem
+    );
+
+// Cylinder cast (most accurate, slowest)
+JPH_VehicleCollisionTesterCastCylinder* cylinderTester = 
+    JPH_VehicleCollisionTesterCastCylinder_Create(
+        objectLayer,
+        0.3f,  // cylinder radius
+        physicsSystem
+    );
+```
+
+## Tire Friction
+
+Customize tire friction for different surfaces:
+
+```c joltc.h:1003-1013
+typedef struct {
+    float maxLongitudinalFriction;
+    float maxLateralFriction;
+} TireFrictionData;
+
+static void CalculateTireImpulse(
+    void* userData,
+    uint32_t wheelIndex,
+    float* outLongitudinalImpulse,
+    float* outLateralImpulse,
+    float suspensionImpulse,
+    float longitudinalFriction,
+    float lateralFriction,
+    float longitudinalSlip,
+    float lateralSlip,
+    float deltaTime
+) {
+    TireFrictionData* data = (TireFrictionData*)userData;
+    
+    // Get material at contact point
+    JPH_Wheel* wheel = JPH_VehicleConstraint_GetWheel(vehicle, wheelIndex);
+    const JPH_PhysicsMaterial* material = GetWheelContactMaterial(wheel);
+    
+    // Modify friction based on surface
+    float surfaceMultiplier = GetSurfaceFrictionMultiplier(material);
+    
+    *outLongitudinalImpulse = suspensionImpulse * longitudinalFriction * surfaceMultiplier;
+    *outLateralImpulse = suspensionImpulse * lateralFriction * surfaceMultiplier;
+}
+
+// Set callback
+JPH_VehicleConstraint_SetTireMaxImpulseCallback(vehicle, CalculateTireImpulse, &frictionData);
+```
+
+## Motorcycle Controller
+
+Motorcycles lean into turns and have different physics:
+
+```c
+// Create motorcycle controller settings
+JPH_MotorcycleControllerSettings* motorcycleSettings = 
+    JPH_MotorcycleControllerSettings_Create();
+
+// Configure lean mechanics
+motorcycleSettings->maxLeanAngle = 0.785f;  // 45 degrees
+motorcycleSettings->leanSpringConstant = 10000.0f;
+motorcycleSettings->leanSpringDamping = 1000.0f;
+
+// Use motorcycle settings for vehicle
+JPH_VehicleConstraintSettings settings;
+JPH_VehicleConstraintSettings_Init(&settings);
+settings.controller = (JPH_VehicleControllerSettings*)motorcycleSettings;
+
+// ... create vehicle as before
+```
+
+## Tracked Vehicle
+
+Tanks and construction vehicles use tracks instead of wheels:
+
+```c
+// Create tracked vehicle controller
+JPH_TrackedVehicleControllerSettings* trackedSettings = 
+    JPH_TrackedVehicleControllerSettings_Create();
+
+// Configure tracks
+trackedSettings->leftTrackTorqueFactor = 0.5f;
+trackedSettings->rightTrackTorqueFactor = 0.5f;
+
+// Use tracked settings
+JPH_VehicleConstraintSettings settings;
+JPH_VehicleConstraintSettings_Init(&settings);
+settings.controller = (JPH_VehicleControllerSettings*)trackedSettings;
+
+// Control tracks independently
+JPH_TrackedVehicleController* controller = 
+    (JPH_TrackedVehicleController*)JPH_VehicleConstraint_GetController(vehicle);
+
+float leftSpeed = 1.0f;   // Full forward
+float rightSpeed = 0.5f;  // Half forward (turn right)
+JPH_TrackedVehicleController_SetDriverInput(
+    controller,
+    leftSpeed,
+    rightSpeed,
+    0.0f  // brake
+);
+```
+
+## Advanced Features
+
+### Custom Gravity
+
+```c joltc.h:2749-2752
+// Override gravity for vehicle
+JPH_Vec3 customGravity = { 0, -20.0f, 0 };  // 2x normal gravity
+JPH_VehicleConstraint_OverrideGravity(vehicle, &customGravity);
+
+// Reset to world gravity
+JPH_VehicleConstraint_ResetGravityOverride(vehicle);
+```
+
+### Pitch/Roll Limits
+
+```c joltc.h:2746
+// Prevent vehicle from flipping too far
+JPH_VehicleConstraint_SetMaxPitchRollAngle(vehicle, 1.57f);  // 90 degrees
+```
+
+### Wheel Transforms
+
+Get wheel positions for rendering:
+
+```c joltc.h:2763-2764
+for (uint32_t i = 0; i < wheelCount; i++) {
+    JPH_Vec3 wheelRight = { 1, 0, 0 };
+    JPH_Vec3 wheelUp = { 0, 1, 0 };
+    
+    // Local transform
+    JPH_Mat4 localTransform;
+    JPH_VehicleConstraint_GetWheelLocalTransform(
+        vehicle,
+        i,
+        &wheelRight,
+        &wheelUp,
+        &localTransform
+    );
+    
+    // World transform for rendering
+    JPH_RMat4 worldTransform;
+    JPH_VehicleConstraint_GetWheelWorldTransform(
+        vehicle,
+        i,
+        &wheelRight,
+        &wheelUp,
+        &worldTransform
+    );
+    
+    RenderWheel(i, &worldTransform);
+}
+```
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Vehicle Setup">
+    - Use realistic masses (cars: 1000-2000kg, trucks: 3000-8000kg)
+    - Set wheel radius accurately for proper speed calculation
+    - Configure suspension frequency 1-2 Hz for cars, 2-3 Hz for race cars
+    - Use anti-roll bars to reduce body roll in turns
+  </Accordion>
+
+  <Accordion title="Performance">
+    - Use ray collision tester for most vehicles (fastest)
+    - Reserve sphere/cylinder testers for high-quality vehicles
+    - Limit wheel count to what's needed (4 for cars, 6-8 for trucks)
+    - Use simpler shapes for vehicle chassis
+  </Accordion>
+
+  <Accordion title="Handling">
+    - Tune differential for desired handling (rear-wheel, front-wheel, AWD)
+    - Adjust tire friction for arcade vs. simulation feel
+    - Lower center of mass for better stability
+    - Increase suspension stiffness for responsive handling
+  </Accordion>
+
+  <Accordion title="Realism">
+    - Match engine torque curve to real-world values
+    - Use appropriate gear ratios (lower = more torque, higher = more speed)
+    - Set realistic max RPM (gas: 6000-8000, diesel: 4000-5000)
+    - Configure transmission shift points for smooth driving
+  </Accordion>
+</AccordionGroup>
+
+## Complete Example
+
+```c
+// Create vehicle body
+JPH_BoxShape* chassis = JPH_BoxShape_Create(&(JPH_Vec3){2, 0.5f, 1}, 0.05f);
+JPH_BodyCreationSettings* bodySettings = JPH_BodyCreationSettings_Create3(
+    (JPH_Shape*)chassis,
+    &(JPH_RVec3){0, 2, 0},
+    NULL,
+    JPH_MotionType_Dynamic,
+    Layers::MOVING
+);
+
+JPH_MassProperties mass = { .mass = 1500.0f };
+JPH_BodyCreationSettings_SetOverrideMassProperties(
+    bodySettings,
+    JPH_OverrideMassProperties_MassAndInertiaProvided
+);
+JPH_BodyCreationSettings_SetMassPropertiesOverride(bodySettings, &mass);
+
+JPH_Body* vehicleBody = JPH_BodyInterface_CreateBody(bodyInterface, bodySettings);
+
+// Create wheels
+JPH_WheelSettings* wheels[4];
+wheels[0] = CreateWheel((JPH_Vec3){-1.5f, -0.3f, 1.0f}, 0.3f, 0.1f);
+wheels[1] = CreateWheel((JPH_Vec3){1.5f, -0.3f, 1.0f}, 0.3f, 0.1f);
+wheels[2] = CreateWheel((JPH_Vec3){-1.5f, -0.3f, -1.0f}, 0.3f, 0.1f);
+wheels[3] = CreateWheel((JPH_Vec3){1.5f, -0.3f, -1.0f}, 0.3f, 0.1f);
+
+// Create vehicle
+JPH_VehicleConstraintSettings vehicleSettings;
+JPH_VehicleConstraintSettings_Init(&vehicleSettings);
+vehicleSettings.wheels = wheels;
+vehicleSettings.wheelsCount = 4;
+
+JPH_WheeledVehicleControllerSettings* controller = 
+    JPH_WheeledVehicleControllerSettings_Create();
+vehicleSettings.controller = (JPH_VehicleControllerSettings*)controller;
+
+JPH_VehicleConstraint* vehicle = JPH_VehicleConstraint_Create(
+    vehicleBody,
+    &vehicleSettings
+);
+
+// Setup collision tester
+JPH_VehicleCollisionTesterRay* tester = 
+    JPH_VehicleCollisionTesterRay_Create(Layers::MOVING, system);
+JPH_VehicleConstraint_SetVehicleCollisionTester(
+    vehicle,
+    (JPH_VehicleCollisionTester*)tester
+);
+
+// Add to physics
+JPH_PhysicsStepListener* stepListener = 
+    JPH_VehicleConstraint_AsPhysicsStepListener(vehicle);
+JPH_PhysicsSystem_AddStepListener(system, stepListener);
+JPH_BodyInterface_AddBody(
+    bodyInterface,
+    JPH_Body_GetID(vehicleBody),
+    JPH_Activation_Activate
+);
+
+// Game loop
+while (running) {
+    float throttle = GetInput(INPUT_FORWARD) - GetInput(INPUT_BACKWARD);
+    float steering = GetInput(INPUT_RIGHT) - GetInput(INPUT_LEFT);
+    float brake = GetInput(INPUT_BRAKE);
+    
+    JPH_WheeledVehicleController* ctrl = 
+        (JPH_WheeledVehicleController*)JPH_VehicleConstraint_GetController(vehicle);
+    
+    JPH_WheeledVehicleController_SetDriverInput(
+        ctrl,
+        throttle,
+        brake,
+        0.0f,
+        steering
+    );
+    
+    JPH_PhysicsSystem_Update(system, deltaTime, 1, jobSystem);
+    
+    // Render vehicle and wheels
+    RenderVehicle(vehicle);
+}
+```

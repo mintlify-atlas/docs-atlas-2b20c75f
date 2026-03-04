@@ -1,0 +1,580 @@
+---
+title: 'Character Virtual'
+description: 'Kinematic character controller with collision resolution'
+---
+
+The `JPH_CharacterVirtual` provides a kinematic character controller that doesn't use a rigid body. Instead, it performs collision detection and resolution manually, making it more suitable for game-like character movement with predictable behavior.
+
+## Types
+
+### JPH_CharacterVirtual
+
+Opaque handle to a virtual character instance.
+
+### JPH_CharacterVirtualSettings
+
+Configuration structure for creating a virtual character.
+
+<ParamField body="base" type="JPH_CharacterBaseSettings">
+  Base character settings including up vector, supporting volume, max slope angle, and shape
+</ParamField>
+
+<ParamField body="ID" type="JPH_CharacterID">
+  Unique identifier for this character
+</ParamField>
+
+<ParamField body="mass" type="float">
+  The mass of the character in kilograms (used for push forces)
+</ParamField>
+
+<ParamField body="maxStrength" type="float">
+  Maximum force the character can apply to push other objects
+</ParamField>
+
+<ParamField body="shapeOffset" type="JPH_Vec3">
+  Offset from the character's position to the shape's center
+</ParamField>
+
+<ParamField body="backFaceMode" type="JPH_BackFaceMode">
+  How to handle back-facing triangles
+</ParamField>
+
+<ParamField body="predictiveContactDistance" type="float">
+  Distance at which contacts are detected predictively
+</ParamField>
+
+<ParamField body="maxCollisionIterations" type="uint32_t">
+  Maximum number of collision iterations per update
+</ParamField>
+
+<ParamField body="maxConstraintIterations" type="uint32_t">
+  Maximum number of constraint iterations per update
+</ParamField>
+
+<ParamField body="minTimeRemaining" type="float">
+  Minimum time step to process
+</ParamField>
+
+<ParamField body="collisionTolerance" type="float">
+  Distance tolerance for collision detection
+</ParamField>
+
+<ParamField body="characterPadding" type="float">
+  Padding around character for collision detection
+</ParamField>
+
+<ParamField body="maxNumHits" type="uint32_t">
+  Maximum number of hits to collect per collision query
+</ParamField>
+
+<ParamField body="hitReductionCosMaxAngle" type="float">
+  Cosine of max angle for hit reduction
+</ParamField>
+
+<ParamField body="penetrationRecoverySpeed" type="float">
+  Speed at which to recover from penetration
+</ParamField>
+
+<ParamField body="innerBodyShape" type="const JPH_Shape*">
+  Optional inner body shape for sliding
+</ParamField>
+
+<ParamField body="innerBodyIDOverride" type="JPH_BodyID">
+  Optional body ID to use for inner body
+</ParamField>
+
+<ParamField body="innerBodyLayer" type="JPH_ObjectLayer">
+  Physics layer for inner body
+</ParamField>
+
+### JPH_CharacterVirtualContact
+
+Information about a contact point.
+
+<ParamField body="bodyB" type="JPH_BodyID">
+  ID of the body being contacted
+</ParamField>
+
+<ParamField body="position" type="JPH_RVec3">
+  World position of the contact
+</ParamField>
+
+<ParamField body="contactNormal" type="JPH_Vec3">
+  Normal vector at the contact point
+</ParamField>
+
+<ParamField body="surfaceNormal" type="JPH_Vec3">
+  Surface normal at the contact point
+</ParamField>
+
+<ParamField body="distance" type="float">
+  Penetration depth (negative) or separation distance (positive)
+</ParamField>
+
+### JPH_ExtendedUpdateSettings
+
+Settings for extended character update with stair walking and floor sticking.
+
+<ParamField body="stickToFloorStepDown" type="JPH_Vec3">
+  Step down distance to stick to floor
+</ParamField>
+
+<ParamField body="walkStairsStepUp" type="JPH_Vec3">
+  Maximum step up height for stairs
+</ParamField>
+
+<ParamField body="walkStairsMinStepForward" type="float">
+  Minimum forward distance required to step
+</ParamField>
+
+<ParamField body="walkStairsStepForwardTest" type="float">
+  Forward test distance for stair detection
+</ParamField>
+
+<ParamField body="walkStairsCosAngleForwardContact" type="float">
+  Cosine of angle to determine forward contact
+</ParamField>
+
+<ParamField body="walkStairsStepDownExtra" type="JPH_Vec3">
+  Extra step down after climbing stairs
+</ParamField>
+
+## Functions
+
+### Initialization
+
+#### JPH_CharacterVirtualSettings_Init
+
+```c
+void JPH_CharacterVirtualSettings_Init(JPH_CharacterVirtualSettings* settings)
+```
+
+Initialize virtual character settings with default values.
+
+#### JPH_CharacterVirtual_Create
+
+```c
+JPH_CharacterVirtual* JPH_CharacterVirtual_Create(
+    const JPH_CharacterVirtualSettings* settings,
+    const JPH_RVec3* position,
+    const JPH_Quat* rotation,
+    uint64_t userData,
+    JPH_PhysicsSystem* system
+)
+```
+
+Create a new virtual character controller.
+
+**Returns**: Handle to the created virtual character
+
+### Properties
+
+#### JPH_CharacterVirtual_GetID
+
+```c
+JPH_CharacterID JPH_CharacterVirtual_GetID(const JPH_CharacterVirtual* character)
+```
+
+Get the character's unique identifier.
+
+#### JPH_CharacterVirtual_GetMass / SetMass
+
+```c
+float JPH_CharacterVirtual_GetMass(JPH_CharacterVirtual* character)
+void JPH_CharacterVirtual_SetMass(JPH_CharacterVirtual* character, float value)
+```
+
+Get or set the character's mass.
+
+#### JPH_CharacterVirtual_GetMaxStrength / SetMaxStrength
+
+```c
+float JPH_CharacterVirtual_GetMaxStrength(JPH_CharacterVirtual* character)
+void JPH_CharacterVirtual_SetMaxStrength(JPH_CharacterVirtual* character, float value)
+```
+
+Get or set the maximum push force.
+
+#### JPH_CharacterVirtual_GetPenetrationRecoverySpeed / SetPenetrationRecoverySpeed
+
+```c
+float JPH_CharacterVirtual_GetPenetrationRecoverySpeed(JPH_CharacterVirtual* character)
+void JPH_CharacterVirtual_SetPenetrationRecoverySpeed(JPH_CharacterVirtual* character, float value)
+```
+
+Get or set how fast the character recovers from penetration.
+
+#### JPH_CharacterVirtual_GetCharacterPadding
+
+```c
+float JPH_CharacterVirtual_GetCharacterPadding(JPH_CharacterVirtual* character)
+```
+
+Get the collision padding around the character.
+
+#### JPH_CharacterVirtual_GetMaxNumHits / SetMaxNumHits
+
+```c
+uint32_t JPH_CharacterVirtual_GetMaxNumHits(JPH_CharacterVirtual* character)
+void JPH_CharacterVirtual_SetMaxNumHits(JPH_CharacterVirtual* character, uint32_t value)
+```
+
+Get or set the maximum number of collision hits to process.
+
+### Position and Rotation
+
+#### JPH_CharacterVirtual_GetPosition / SetPosition
+
+```c
+void JPH_CharacterVirtual_GetPosition(JPH_CharacterVirtual* character, JPH_RVec3* position)
+void JPH_CharacterVirtual_SetPosition(JPH_CharacterVirtual* character, const JPH_RVec3* position)
+```
+
+Get or set the character's position.
+
+#### JPH_CharacterVirtual_GetRotation / SetRotation
+
+```c
+void JPH_CharacterVirtual_GetRotation(JPH_CharacterVirtual* character, JPH_Quat* rotation)
+void JPH_CharacterVirtual_SetRotation(JPH_CharacterVirtual* character, const JPH_Quat* rotation)
+```
+
+Get or set the character's rotation.
+
+#### JPH_CharacterVirtual_GetWorldTransform
+
+```c
+void JPH_CharacterVirtual_GetWorldTransform(JPH_CharacterVirtual* character, JPH_RMat4* result)
+```
+
+Get the character's world transformation matrix.
+
+#### JPH_CharacterVirtual_GetCenterOfMassTransform
+
+```c
+void JPH_CharacterVirtual_GetCenterOfMassTransform(JPH_CharacterVirtual* character, JPH_RMat4* result)
+```
+
+Get the center of mass transformation matrix.
+
+### Velocity
+
+#### JPH_CharacterVirtual_GetLinearVelocity / SetLinearVelocity
+
+```c
+void JPH_CharacterVirtual_GetLinearVelocity(JPH_CharacterVirtual* character, JPH_Vec3* velocity)
+void JPH_CharacterVirtual_SetLinearVelocity(JPH_CharacterVirtual* character, const JPH_Vec3* velocity)
+```
+
+Get or set the character's linear velocity.
+
+#### JPH_CharacterVirtual_CancelVelocityTowardsSteepSlopes
+
+```c
+void JPH_CharacterVirtual_CancelVelocityTowardsSteepSlopes(
+    JPH_CharacterVirtual* character,
+    const JPH_Vec3* desiredVelocity,
+    JPH_Vec3* velocity
+)
+```
+
+Modify velocity to prevent movement up steep slopes.
+
+<ParamField path="desiredVelocity" type="const JPH_Vec3*">
+  The desired velocity before slope cancellation
+</ParamField>
+
+<ParamField path="velocity" type="JPH_Vec3*">
+  Output velocity with steep slope movement cancelled
+</ParamField>
+
+### Update
+
+#### JPH_CharacterVirtual_Update
+
+```c
+void JPH_CharacterVirtual_Update(
+    JPH_CharacterVirtual* character,
+    float deltaTime,
+    JPH_ObjectLayer layer,
+    JPH_PhysicsSystem* system,
+    const JPH_BodyFilter* bodyFilter,
+    const JPH_ShapeFilter* shapeFilter
+)
+```
+
+Update the character's position based on its velocity.
+
+<ParamField path="deltaTime" type="float">
+  Time step in seconds
+</ParamField>
+
+<ParamField path="layer" type="JPH_ObjectLayer">
+  Object layer to test collisions against
+</ParamField>
+
+<ParamField path="bodyFilter" type="const JPH_BodyFilter*">
+  Optional filter to exclude certain bodies
+</ParamField>
+
+<ParamField path="shapeFilter" type="const JPH_ShapeFilter*">
+  Optional filter to exclude certain shapes
+</ParamField>
+
+#### JPH_CharacterVirtual_ExtendedUpdate
+
+```c
+void JPH_CharacterVirtual_ExtendedUpdate(
+    JPH_CharacterVirtual* character,
+    float deltaTime,
+    const JPH_ExtendedUpdateSettings* settings,
+    JPH_ObjectLayer layer,
+    JPH_PhysicsSystem* system,
+    const JPH_BodyFilter* bodyFilter,
+    const JPH_ShapeFilter* shapeFilter
+)
+```
+
+Update with additional features like stair walking and floor sticking.
+
+<ParamField path="settings" type="const JPH_ExtendedUpdateSettings*">
+  Extended update configuration
+</ParamField>
+
+#### JPH_CharacterVirtual_RefreshContacts
+
+```c
+void JPH_CharacterVirtual_RefreshContacts(
+    JPH_CharacterVirtual* character,
+    JPH_ObjectLayer layer,
+    JPH_PhysicsSystem* system,
+    const JPH_BodyFilter* bodyFilter,
+    const JPH_ShapeFilter* shapeFilter
+)
+```
+
+Refresh the contact cache without moving the character.
+
+### Movement Features
+
+#### JPH_CharacterVirtual_CanWalkStairs
+
+```c
+bool JPH_CharacterVirtual_CanWalkStairs(
+    JPH_CharacterVirtual* character,
+    const JPH_Vec3* linearVelocity
+)
+```
+
+Check if the character can walk stairs with the given velocity.
+
+**Returns**: true if stairs can be walked
+
+#### JPH_CharacterVirtual_WalkStairs
+
+```c
+bool JPH_CharacterVirtual_WalkStairs(
+    JPH_CharacterVirtual* character,
+    float deltaTime,
+    const JPH_Vec3* stepUp,
+    const JPH_Vec3* stepForward,
+    const JPH_Vec3* stepForwardTest,
+    const JPH_Vec3* stepDownExtra,
+    JPH_ObjectLayer layer,
+    JPH_PhysicsSystem* system,
+    const JPH_BodyFilter* bodyFilter,
+    const JPH_ShapeFilter* shapeFilter
+)
+```
+
+Attempt to walk up stairs.
+
+**Returns**: true if stairs were successfully walked
+
+#### JPH_CharacterVirtual_StickToFloor
+
+```c
+bool JPH_CharacterVirtual_StickToFloor(
+    JPH_CharacterVirtual* character,
+    const JPH_Vec3* stepDown,
+    JPH_ObjectLayer layer,
+    JPH_PhysicsSystem* system,
+    const JPH_BodyFilter* bodyFilter,
+    const JPH_ShapeFilter* shapeFilter
+)
+```
+
+Make the character stick to the floor when going down slopes/stairs.
+
+**Returns**: true if floor contact was maintained
+
+#### JPH_CharacterVirtual_UpdateGroundVelocity
+
+```c
+void JPH_CharacterVirtual_UpdateGroundVelocity(JPH_CharacterVirtual* character)
+```
+
+Update the ground velocity based on the ground body's movement.
+
+### Contacts
+
+#### JPH_CharacterVirtual_StartTrackingContactChanges
+
+```c
+void JPH_CharacterVirtual_StartTrackingContactChanges(JPH_CharacterVirtual* character)
+```
+
+Start tracking which contacts are added/removed.
+
+#### JPH_CharacterVirtual_FinishTrackingContactChanges
+
+```c
+void JPH_CharacterVirtual_FinishTrackingContactChanges(JPH_CharacterVirtual* character)
+```
+
+Stop tracking contact changes and fire callbacks.
+
+#### JPH_CharacterVirtual_GetNumActiveContacts
+
+```c
+uint32_t JPH_CharacterVirtual_GetNumActiveContacts(JPH_CharacterVirtual* character)
+```
+
+Get the number of active contacts.
+
+#### JPH_CharacterVirtual_GetActiveContact
+
+```c
+void JPH_CharacterVirtual_GetActiveContact(
+    JPH_CharacterVirtual* character,
+    uint32_t index,
+    JPH_CharacterVirtualContact* result
+)
+```
+
+Get information about a specific contact.
+
+#### JPH_CharacterVirtual_HasCollidedWithBody
+
+```c
+bool JPH_CharacterVirtual_HasCollidedWithBody(
+    JPH_CharacterVirtual* character,
+    const JPH_BodyID body
+)
+```
+
+Check if the character collided with a specific body.
+
+### Shape
+
+#### JPH_CharacterVirtual_SetShape
+
+```c
+bool JPH_CharacterVirtual_SetShape(
+    JPH_CharacterVirtual* character,
+    const JPH_Shape* shape,
+    float maxPenetrationDepth,
+    JPH_ObjectLayer layer,
+    JPH_PhysicsSystem* system,
+    const JPH_BodyFilter* bodyFilter,
+    const JPH_ShapeFilter* shapeFilter
+)
+```
+
+Change the character's collision shape.
+
+**Returns**: true if shape was changed successfully
+
+## Example Usage
+
+```c
+// Initialize settings
+JPH_CharacterVirtualSettings settings;
+JPH_CharacterVirtualSettings_Init(&settings);
+
+settings.mass = 70.0f;
+settings.maxStrength = 100.0f;
+settings.characterPadding = 0.02f;
+settings.maxCollisionIterations = 5;
+settings.maxConstraintIterations = 15;
+settings.penetrationRecoverySpeed = 1.0f;
+
+// Create capsule shape
+JPH_Shape* shape = JPH_CapsuleShape_Create(0.9f, 0.3f);
+settings.base.shape = shape;
+
+// Set up vector
+JPH_Vec3 up = { 0.0f, 1.0f, 0.0f };
+settings.base.up = up;
+settings.base.maxSlopeAngle = 0.785398f;  // 45 degrees
+
+// Create character
+JPH_RVec3 position = { 0.0f, 2.0f, 0.0f };
+JPH_Quat rotation = { 0.0f, 0.0f, 0.0f, 1.0f };
+JPH_CharacterVirtual* character = JPH_CharacterVirtual_Create(
+    &settings,
+    &position,
+    &rotation,
+    0,
+    physicsSystem
+);
+
+// Game loop
+float deltaTime = 1.0f / 60.0f;
+
+// Set desired velocity (e.g., from input)
+JPH_Vec3 desiredVelocity = { 5.0f, 0.0f, 0.0f };
+
+// Cancel velocity towards steep slopes
+JPH_Vec3 velocity;
+JPH_CharacterVirtual_CancelVelocityTowardsSteepSlopes(
+    character,
+    &desiredVelocity,
+    &velocity
+);
+
+JPH_CharacterVirtual_SetLinearVelocity(character, &velocity);
+
+// Update character with stair walking
+JPH_ExtendedUpdateSettings extSettings;
+extSettings.stickToFloorStepDown = (JPH_Vec3){ 0.0f, -0.5f, 0.0f };
+extSettings.walkStairsStepUp = (JPH_Vec3){ 0.0f, 0.4f, 0.0f };
+extSettings.walkStairsMinStepForward = 0.02f;
+extSettings.walkStairsStepForwardTest = 0.15f;
+
+JPH_CharacterVirtual_ExtendedUpdate(
+    character,
+    deltaTime,
+    &extSettings,
+    OBJECT_LAYER_MOVING,
+    physicsSystem,
+    NULL,  // no body filter
+    NULL   // no shape filter
+);
+
+// Check ground state
+JPH_GroundState groundState = JPH_CharacterBase_GetGroundState(
+    (JPH_CharacterBase*)character
+);
+
+if (groundState == JPH_GroundState_OnGround) {
+    printf("Character is on the ground\n");
+}
+
+// Get contacts
+uint32_t numContacts = JPH_CharacterVirtual_GetNumActiveContacts(character);
+for (uint32_t i = 0; i < numContacts; i++) {
+    JPH_CharacterVirtualContact contact;
+    JPH_CharacterVirtual_GetActiveContact(character, i, &contact);
+    // Process contact...
+}
+
+// Cleanup
+JPH_CharacterBase_Destroy((JPH_CharacterBase*)character);
+JPH_Shape_Destroy(shape);
+```
+
+## See Also
+
+- [Character](/api/character/character) - Physics-based character controller
+- [Character Base](joltc.h:2268) - Base character functionality

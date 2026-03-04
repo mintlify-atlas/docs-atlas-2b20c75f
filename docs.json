@@ -1,122 +1,125 @@
 {
   "$schema": "https://mintlify.com/docs.json",
-  "theme": "mint",
-  "name": "Mint Starter Kit",
+  "name": "JoltC",
+  "theme": "aspen",
   "colors": {
-    "primary": "#16A34A",
-    "light": "#07C983",
-    "dark": "#15803D"
+    "primary": "#94cb04",
+    "light": "#545454",
+    "dark": "#94cb04"
   },
-  "favicon": "/favicon.svg",
+  "favicon": "/favicon.png",
+  "logo": {
+    "light": "/logo-light.png",
+    "dark": "/logo-light.png"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/amerkoleci/joltc"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/amerkoleci/joltc"
+    }
+  },
   "navigation": {
     "tabs": [
       {
-        "tab": "Guides",
+        "tab": "Documentation",
         "groups": [
           {
-            "group": "Getting started",
+            "group": "Getting Started",
             "pages": [
-              "index",
-              "quickstart",
-              "development"
+              "introduction",
+              "installation",
+              "quickstart"
             ]
           },
           {
-            "group": "Customization",
+            "group": "Core Concepts",
             "pages": [
-              "essentials/settings",
-              "essentials/navigation"
+              "core/physics-system",
+              "core/bodies",
+              "core/shapes",
+              "core/collision-detection"
             ]
           },
           {
-            "group": "Writing content",
+            "group": "Guides",
             "pages": [
-              "essentials/markdown",
-              "essentials/code",
-              "essentials/images",
-              "essentials/reusable-snippets"
-            ]
-          },
-          {
-            "group": "AI tools",
-            "pages": [
-              "ai-tools/cursor",
-              "ai-tools/claude-code",
-              "ai-tools/windsurf"
+              "guides/creating-bodies",
+              "guides/constraints",
+              "guides/character-controller",
+              "guides/raycasting",
+              "guides/vehicles"
             ]
           }
         ]
       },
       {
-        "tab": "API reference",
+        "tab": "API Reference",
         "groups": [
           {
-            "group": "API documentation",
+            "group": "Core",
             "pages": [
-              "api-reference/introduction"
+              "api/initialization",
+              "api/physics-system",
+              "api/job-system"
             ]
           },
           {
-            "group": "Endpoint examples",
+            "group": "Bodies",
             "pages": [
-              "api-reference/endpoint/get",
-              "api-reference/endpoint/create",
-              "api-reference/endpoint/delete",
-              "api-reference/endpoint/webhook"
+              "api/body-interface",
+              "api/body-creation",
+              "api/motion-properties"
+            ]
+          },
+          {
+            "group": "Shapes",
+            "pages": [
+              "api/shapes/convex",
+              "api/shapes/compound",
+              "api/shapes/mesh",
+              "api/shapes/heightfield"
+            ]
+          },
+          {
+            "group": "Collision",
+            "pages": [
+              "api/collision/queries",
+              "api/collision/filters",
+              "api/collision/listeners"
+            ]
+          },
+          {
+            "group": "Constraints",
+            "pages": [
+              "api/constraints/fixed",
+              "api/constraints/distance",
+              "api/constraints/hinge",
+              "api/constraints/slider",
+              "api/constraints/six-dof"
+            ]
+          },
+          {
+            "group": "Character",
+            "pages": [
+              "api/character/character",
+              "api/character/character-virtual"
+            ]
+          },
+          {
+            "group": "Math",
+            "pages": [
+              "api/math/vectors",
+              "api/math/quaternions",
+              "api/math/matrices"
             ]
           }
         ]
       }
-    ],
-    "global": {
-      "anchors": [
-        {
-          "anchor": "Documentation",
-          "href": "https://mintlify.com/docs",
-          "icon": "book-open-cover"
-        },
-        {
-          "anchor": "Blog",
-          "href": "https://mintlify.com/blog",
-          "icon": "newspaper"
-        }
-      ]
-    }
-  },
-  "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
-  },
-  "navbar": {
-    "links": [
-      {
-        "label": "Support",
-        "href": "mailto:hi@mintlify.com"
-      }
-    ],
-    "primary": {
-      "type": "button",
-      "label": "Dashboard",
-      "href": "https://dashboard.mintlify.com"
-    }
-  },
-  "contextual": {
-    "options": [
-     "copy",
-     "view",
-     "chatgpt",
-     "claude",
-     "perplexity",
-     "mcp",
-     "cursor",
-     "vscode"
-   ]
-  },
-  "footer": {
-    "socials": {
-      "x": "https://x.com/mintlify",
-      "github": "https://github.com/mintlify",
-      "linkedin": "https://linkedin.com/company/mintlify"
-    }
+    ]
   }
 }

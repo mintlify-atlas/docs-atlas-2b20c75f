@@ -1,0 +1,380 @@
+---
+title: Motion Properties
+description: Manage mass, inertia, damping, and velocity constraints for dynamic bodies
+---
+
+Motion properties define how a dynamic body responds to forces and moves through the simulation. These properties are only available for bodies with motion type `JPH_MotionType_Dynamic`.
+
+## Accessing Motion Properties
+
+Motion properties are accessed through the `JPH_Body` object:
+
+### JPH_Body_GetMotionProperties
+
+Gets the motion properties of a body.
+
+<ParamField path="body" type="JPH_Body*">
+  The body
+</ParamField>
+
+**Returns:** `JPH_MotionProperties*` - The motion properties (NULL for static/kinematic bodies)
+
+### JPH_Body_GetMotionPropertiesUnchecked
+
+Gets motion properties without checking if the body is dynamic.
+
+<ParamField path="body" type="JPH_Body*">
+  The body (must be dynamic)
+</ParamField>
+
+**Returns:** `JPH_MotionProperties*` - The motion properties
+
+<Warning>
+  Only use this function if you're certain the body is dynamic. Using it on static or kinematic bodies will cause undefined behavior.
+</Warning>
+
+## Mass and Inertia
+
+Mass and inertia properties determine how a body resists linear and rotational acceleration.
+
+### JPH_MotionProperties_GetInverseMassUnchecked
+
+Gets the inverse mass of the body.
+
+<ParamField path="properties" type="JPH_MotionProperties*">
+  The motion properties
+</ParamField>
+
+**Returns:** `float` - The inverse mass (1/mass). Zero means infinite mass.
+
+### JPH_MotionProperties_SetInverseMass
+
+Sets the inverse mass of the body.
+
+<ParamField path="properties" type="JPH_MotionProperties*">
+  The motion properties
+</ParamField>
+
+<ParamField path="inverseMass" type="float">
+  The inverse mass to set
+</ParamField>
+
+<Info>
+  Mass is stored as inverse mass for performance. To set mass directly, use `1.0 / mass`.
+</Info>
+
+### JPH_MotionProperties_GetInverseInertiaDiagonal
+
+Gets the inverse inertia tensor diagonal.
+
+<ParamField path="properties" type="JPH_MotionProperties*">
+  The motion properties
+</ParamField>
+
+<ParamField path="result" type="JPH_Vec3*">
+  Output parameter for the diagonal components
+</ParamField>
+
+### JPH_MotionProperties_GetInertiaRotation
+
+Gets the rotation of the inertia tensor.
+
+<ParamField path="properties" type="JPH_MotionProperties*">
+  The motion properties
+</ParamField>
+
+<ParamField path="result" type="JPH_Quat*">
+  Output parameter for the rotation quaternion
+</ParamField>
+
+### JPH_MotionProperties_SetInverseInertia
+
+Sets the inverse inertia tensor.
+
+<ParamField path="properties" type="JPH_MotionProperties*">
+  The motion properties
+</ParamField>
+
+<ParamField path="diagonal" type="JPH_Vec3*">
+  The diagonal components of the inverse inertia tensor
+</ParamField>
+
+<ParamField path="rot" type="JPH_Quat*">
+  The rotation of the inertia tensor
+</ParamField>
+
+## Mass Properties
+
+### JPH_MassProperties
+
+Structure representing mass and inertia:
+
+```c
+typedef struct JPH_MassProperties {
+    float mass;
+    JPH_Mat4 inertia;
+} JPH_MassProperties;
+```
+
+### JPH_MotionProperties_SetMassProperties
+
+Sets mass properties from a `JPH_MassProperties` structure.
+
+<ParamField path="properties" type="JPH_MotionProperties*">
+  The motion properties
+</ParamField>
+
+<ParamField path="allowedDOFs" type="JPH_AllowedDOFs">
+  The allowed degrees of freedom
+</ParamField>
+
+<ParamField path="massProperties" type="const JPH_MassProperties*">
+  The mass properties to set
+</ParamField>
+
+### JPH_MotionProperties_ScaleToMass
+
+Scales the mass and inertia to a specific mass value.
+
+<ParamField path="properties" type="JPH_MotionProperties*">
+  The motion properties
+</ParamField>
+
+<ParamField path="mass" type="float">
+  The target mass
+</ParamField>
+
+```c
+// Get motion properties
+JPH_MotionProperties* motionProps = JPH_Body_GetMotionProperties(body);
+
+// Scale to 10 kg
+JPH_MotionProperties_ScaleToMass(motionProps, 10.0f);
+```
+
+### JPH_MassProperties_DecomposePrincipalMomentsOfInertia
+
+Decomposes the inertia tensor into principal moments and rotation.
+
+<ParamField path="properties" type="JPH_MassProperties*">
+  The mass properties
+</ParamField>
+
+<ParamField path="rotation" type="JPH_Mat4*">
+  Output parameter for the rotation matrix
+</ParamField>
+
+<ParamField path="diagonal" type="JPH_Vec3*">
+  Output parameter for the diagonal inertia values
+</ParamField>
+
+### JPH_MassProperties_ScaleToMass
+
+Scales mass properties to a specific mass.
+
+<ParamField path="properties" type="JPH_MassProperties*">
+  The mass properties to scale
+</ParamField>
+
+<ParamField path="mass" type="float">
+  The target mass
+</ParamField>
+
+### JPH_MassProperties_GetEquivalentSolidBoxSize
+
+Calculates the size of a solid box with equivalent inertia.
+
+<ParamField path="mass" type="float">
+  The mass
+</ParamField>
+
+<ParamField path="inertiaDiagonal" type="const JPH_Vec3*">
+  The diagonal inertia values
+</ParamField>
+
+<ParamField path="result" type="JPH_Vec3*">
+  Output parameter for the box dimensions
+</ParamField>
+
+## Damping
+
+Damping reduces velocity over time, simulating air resistance and friction.
+
+### JPH_MotionProperties_GetLinearDamping
+
+Gets the linear damping coefficient.
+
+<ParamField path="properties" type="const JPH_MotionProperties*">
+  The motion properties
+</ParamField>
+
+**Returns:** `float` - The linear damping coefficient (0 = no damping)
+
+### JPH_MotionProperties_SetLinearDamping
+
+Sets the linear damping coefficient.
+
+<ParamField path="properties" type="JPH_MotionProperties*">
+  The motion properties
+</ParamField>
+
+<ParamField path="damping" type="float">
+  The linear damping coefficient
+</ParamField>
+
+### JPH_MotionProperties_GetAngularDamping
+
+Gets the angular damping coefficient.
+
+<ParamField path="properties" type="const JPH_MotionProperties*">
+  The motion properties
+</ParamField>
+
+**Returns:** `float` - The angular damping coefficient (0 = no damping)
+
+### JPH_MotionProperties_SetAngularDamping
+
+Sets the angular damping coefficient.
+
+<ParamField path="properties" type="JPH_MotionProperties*">
+  The motion properties
+</ParamField>
+
+<ParamField path="damping" type="float">
+  The angular damping coefficient
+</ParamField>
+
+```c
+JPH_MotionProperties* motionProps = JPH_Body_GetMotionProperties(body);
+
+// Add some air resistance
+JPH_MotionProperties_SetLinearDamping(motionProps, 0.05f);
+JPH_MotionProperties_SetAngularDamping(motionProps, 0.05f);
+```
+
+## Degrees of Freedom
+
+Degrees of freedom (DOFs) constrain which axes a body can move or rotate on.
+
+### JPH_AllowedDOFs
+
+Enum defining allowed degrees of freedom:
+
+```c
+typedef enum JPH_AllowedDOFs {
+    JPH_AllowedDOFs_All = 0b111111,
+    JPH_AllowedDOFs_TranslationX = 0b000001,
+    JPH_AllowedDOFs_TranslationY = 0b000010,
+    JPH_AllowedDOFs_TranslationZ = 0b000100,
+    JPH_AllowedDOFs_RotationX = 0b001000,
+    JPH_AllowedDOFs_RotationY = 0b010000,
+    JPH_AllowedDOFs_RotationZ = 0b100000,
+    JPH_AllowedDOFs_Plane2D = JPH_AllowedDOFs_TranslationX | 
+                              JPH_AllowedDOFs_TranslationY | 
+                              JPH_AllowedDOFs_RotationZ,
+} JPH_AllowedDOFs;
+```
+
+### JPH_MotionProperties_GetAllowedDOFs
+
+Gets the allowed degrees of freedom.
+
+<ParamField path="properties" type="const JPH_MotionProperties*">
+  The motion properties
+</ParamField>
+
+**Returns:** `JPH_AllowedDOFs` - The allowed degrees of freedom
+
+```c
+// Create a body that can only move in the XY plane and rotate around Z
+JPH_BodyCreationSettings_SetAllowedDOFs(settings, JPH_AllowedDOFs_Plane2D);
+
+// Or create a body that can only rotate around Y axis
+JPH_BodyCreationSettings_SetAllowedDOFs(settings, JPH_AllowedDOFs_RotationY);
+```
+
+## Example: Configuring Motion Properties
+
+```c
+// Create a dynamic body
+JPH_BodyID bodyID = JPH_BodyInterface_CreateAndAddBody(
+    bodyInterface, settings, JPH_Activation_Activate);
+
+// Lock the body to modify it
+JPH_BodyLockWrite lock;
+JPH_BodyLockInterface_LockWrite(lockInterface, bodyID, &lock);
+
+if (lock.body != NULL) {
+    // Get motion properties
+    JPH_MotionProperties* motionProps = JPH_Body_GetMotionProperties(lock.body);
+    
+    if (motionProps != NULL) {
+        // Set mass to 5 kg
+        JPH_MotionProperties_ScaleToMass(motionProps, 5.0f);
+        
+        // Add damping to simulate air resistance
+        JPH_MotionProperties_SetLinearDamping(motionProps, 0.1f);
+        JPH_MotionProperties_SetAngularDamping(motionProps, 0.1f);
+    }
+    
+    JPH_BodyLockInterface_UnlockWrite(lockInterface, &lock);
+}
+```
+
+## Example: Custom Inertia Tensor
+
+```c
+// Create custom inertia for a rod rotating around its center
+JPH_Vec3 inertiaDiagonal = {
+    0.1f,  // Low inertia around X (easy to rotate)
+    1.0f,  // High inertia around Y (hard to rotate)
+    1.0f   // High inertia around Z (hard to rotate)
+};
+
+JPH_Quat inertiaRotation = { 0.0f, 0.0f, 0.0f, 1.0f }; // No rotation
+
+JPH_MotionProperties* motionProps = JPH_Body_GetMotionProperties(body);
+JPH_MotionProperties_SetInverseInertia(
+    motionProps,
+    &inertiaDiagonal,
+    &inertiaRotation
+);
+```
+
+## Mass Properties Override
+
+When creating a body, you can override how mass properties are calculated:
+
+```c
+typedef enum JPH_OverrideMassProperties {
+    JPH_OverrideMassProperties_CalculateMassAndInertia,  // Calculate from shape
+    JPH_OverrideMassProperties_CalculateInertia,          // Use provided mass
+    JPH_OverrideMassProperties_MassAndInertiaProvided,    // Use provided values
+} JPH_OverrideMassProperties;
+```
+
+```c
+// Set custom mass properties
+JPH_MassProperties massProps;
+massProps.mass = 10.0f;
+// Set inertia tensor...
+
+JPH_BodyCreationSettings_SetOverrideMassProperties(
+    settings,
+    JPH_OverrideMassProperties_MassAndInertiaProvided
+);
+JPH_BodyCreationSettings_SetMassPropertiesOverride(settings, &massProps);
+```
+
+## Performance Considerations
+
+- **Inverse storage**: Mass and inertia are stored as inverse values for performance in collision resolution
+- **Sleeping bodies**: Bodies with low velocity automatically sleep to save CPU
+- **Damping**: Higher damping values make bodies come to rest faster
+- **DOF constraints**: Constraining degrees of freedom can improve simulation stability
+
+## Related Functions
+
+See also:
+- [Body Interface](/api/body-interface) - For general body manipulation
+- [Body Creation](/api/body-creation) - For initial mass property setup

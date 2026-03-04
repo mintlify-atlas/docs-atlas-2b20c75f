@@ -1,0 +1,532 @@
+---
+title: Slider Constraint
+description: API reference for JPH_SliderConstraint - creates a linear sliding joint along a single axis
+---
+
+# Slider Constraint
+
+The `JPH_SliderConstraint` creates a sliding joint that allows linear movement along a single axis while constraining all other degrees of freedom. It supports position limits, motors, and friction.
+
+## Use Cases
+
+- Pistons and hydraulic cylinders
+- Drawer slides
+- Linear actuators
+- Elevator mechanisms
+- Spring-loaded sliding components
+- Rail-based movement
+
+## Types
+
+### JPH_SliderConstraint
+
+```c
+typedef struct JPH_SliderConstraint JPH_SliderConstraint;
+```
+
+Opaque handle to a slider constraint instance.
+
+### JPH_SliderConstraintSettings
+
+```c
+typedef struct JPH_SliderConstraintSettings {
+    JPH_ConstraintSettings  base;
+    JPH_ConstraintSpace     space;
+    bool                    autoDetectPoint;
+    JPH_RVec3               point1;
+    JPH_Vec3                sliderAxis1;
+    JPH_Vec3                normalAxis1;
+    JPH_RVec3               point2;
+    JPH_Vec3                sliderAxis2;
+    JPH_Vec3                normalAxis2;
+    float                   limitsMin;
+    float                   limitsMax;
+    JPH_SpringSettings      limitsSpringSettings;
+    float                   maxFrictionForce;
+    JPH_MotorSettings       motorSettings;
+} JPH_SliderConstraintSettings;
+```
+
+Settings structure for creating a slider constraint.
+
+<ParamField path="base" type="JPH_ConstraintSettings">
+  Base constraint settings (enabled, priority, etc.)
+</ParamField>
+
+<ParamField path="space" type="JPH_ConstraintSpace">
+  Coordinate space for the constraint points and axes
+</ParamField>
+
+<ParamField path="autoDetectPoint" type="bool">
+  If true, automatically calculate the constraint point from body positions
+</ParamField>
+
+<ParamField path="point1" type="JPH_RVec3">
+  Slider attachment point on body 1
+</ParamField>
+
+<ParamField path="sliderAxis1" type="JPH_Vec3">
+  Direction of allowed sliding motion for body 1 (normalized)
+</ParamField>
+
+<ParamField path="normalAxis1" type="JPH_Vec3">
+  Reference axis perpendicular to slider axis for body 1
+</ParamField>
+
+<ParamField path="point2" type="JPH_RVec3">
+  Slider attachment point on body 2
+</ParamField>
+
+<ParamField path="sliderAxis2" type="JPH_Vec3">
+  Direction of allowed sliding motion for body 2 (normalized)
+</ParamField>
+
+<ParamField path="normalAxis2" type="JPH_Vec3">
+  Reference axis perpendicular to slider axis for body 2
+</ParamField>
+
+<ParamField path="limitsMin" type="float">
+  Minimum position along slider axis (meters)
+</ParamField>
+
+<ParamField path="limitsMax" type="float">
+  Maximum position along slider axis (meters)
+</ParamField>
+
+<ParamField path="limitsSpringSettings" type="JPH_SpringSettings">
+  Spring settings for position limits (soft limits)
+</ParamField>
+
+<ParamField path="maxFrictionForce" type="float">
+  Maximum friction force applied to the slider (N)
+</ParamField>
+
+<ParamField path="motorSettings" type="JPH_MotorSettings">
+  Motor settings for powered sliding
+</ParamField>
+
+## Functions
+
+### Settings
+
+#### JPH_SliderConstraintSettings_Init
+
+```c
+void JPH_SliderConstraintSettings_Init(JPH_SliderConstraintSettings* settings);
+```
+
+Initializes a slider constraint settings structure with default values.
+
+<ParamField path="settings" type="JPH_SliderConstraintSettings*">
+  Pointer to settings structure to initialize
+</ParamField>
+
+#### JPH_SliderConstraintSettings_SetSliderAxis
+
+```c
+void JPH_SliderConstraintSettings_SetSliderAxis(
+    JPH_SliderConstraintSettings* settings,
+    const JPH_Vec3* axis
+);
+```
+
+Sets the slider axis direction for both bodies.
+
+<ParamField path="settings" type="JPH_SliderConstraintSettings*">
+  Settings structure to modify
+</ParamField>
+
+<ParamField path="axis" type="const JPH_Vec3*">
+  Slider axis direction (will be normalized)
+</ParamField>
+
+### Creation
+
+#### JPH_SliderConstraint_Create
+
+```c
+JPH_SliderConstraint* JPH_SliderConstraint_Create(
+    const JPH_SliderConstraintSettings* settings,
+    JPH_Body* body1,
+    JPH_Body* body2
+);
+```
+
+Creates a new slider constraint between two bodies.
+
+<ParamField path="settings" type="const JPH_SliderConstraintSettings*">
+  Constraint configuration settings
+</ParamField>
+
+<ParamField path="body1" type="JPH_Body*">
+  First body to constrain
+</ParamField>
+
+<ParamField path="body2" type="JPH_Body*">
+  Second body to constrain
+</ParamField>
+
+<ResponseField name="return" type="JPH_SliderConstraint*">
+  Pointer to the created constraint, or NULL on failure
+</ResponseField>
+
+#### JPH_SliderConstraint_GetSettings
+
+```c
+void JPH_SliderConstraint_GetSettings(
+    JPH_SliderConstraint* constraint,
+    JPH_SliderConstraintSettings* settings
+);
+```
+
+Retrieves the current settings of a slider constraint.
+
+<ParamField path="constraint" type="JPH_SliderConstraint*">
+  The constraint to query
+</ParamField>
+
+<ParamField path="settings" type="JPH_SliderConstraintSettings*">
+  Output structure to receive the settings
+</ParamField>
+
+### Querying State
+
+#### JPH_SliderConstraint_GetCurrentPosition
+
+```c
+float JPH_SliderConstraint_GetCurrentPosition(JPH_SliderConstraint* constraint);
+```
+
+Gets the current position along the slider axis.
+
+<ParamField path="constraint" type="JPH_SliderConstraint*">
+  The constraint to query
+</ParamField>
+
+<ResponseField name="return" type="float">
+  Current position in meters
+</ResponseField>
+
+### Friction
+
+#### JPH_SliderConstraint_SetMaxFrictionForce
+
+```c
+void JPH_SliderConstraint_SetMaxFrictionForce(
+    JPH_SliderConstraint* constraint,
+    float frictionForce
+);
+```
+
+Sets the maximum friction force applied to the slider.
+
+<ParamField path="constraint" type="JPH_SliderConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="frictionForce" type="float">
+  Maximum friction force in Newtons
+</ParamField>
+
+#### JPH_SliderConstraint_GetMaxFrictionForce
+
+```c
+float JPH_SliderConstraint_GetMaxFrictionForce(JPH_SliderConstraint* constraint);
+```
+
+Gets the current maximum friction force.
+
+<ParamField path="constraint" type="JPH_SliderConstraint*">
+  The constraint to query
+</ParamField>
+
+<ResponseField name="return" type="float">
+  Maximum friction force in Newtons
+</ResponseField>
+
+### Motor Control
+
+#### JPH_SliderConstraint_SetMotorSettings
+
+```c
+void JPH_SliderConstraint_SetMotorSettings(
+    JPH_SliderConstraint* constraint,
+    JPH_MotorSettings* settings
+);
+```
+
+Sets the motor settings for powered sliding.
+
+<ParamField path="constraint" type="JPH_SliderConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="settings" type="JPH_MotorSettings*">
+  Motor configuration settings
+</ParamField>
+
+#### JPH_SliderConstraint_GetMotorSettings
+
+```c
+void JPH_SliderConstraint_GetMotorSettings(
+    const JPH_SliderConstraint* constraint,
+    JPH_MotorSettings* result
+);
+```
+
+Gets the current motor settings.
+
+#### JPH_SliderConstraint_SetMotorState
+
+```c
+void JPH_SliderConstraint_SetMotorState(
+    JPH_SliderConstraint* constraint,
+    JPH_MotorState state
+);
+```
+
+Sets the motor state.
+
+<ParamField path="constraint" type="JPH_SliderConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="state" type="JPH_MotorState">
+  Motor state:
+  - `JPH_MotorState_Off`: Motor disabled
+  - `JPH_MotorState_Velocity`: Velocity control mode
+  - `JPH_MotorState_Position`: Position control mode
+</ParamField>
+
+#### JPH_SliderConstraint_GetMotorState
+
+```c
+JPH_MotorState JPH_SliderConstraint_GetMotorState(JPH_SliderConstraint* constraint);
+```
+
+Gets the current motor state.
+
+#### JPH_SliderConstraint_SetTargetVelocity
+
+```c
+void JPH_SliderConstraint_SetTargetVelocity(
+    JPH_SliderConstraint* constraint,
+    float velocity
+);
+```
+
+Sets the target velocity for velocity motor mode.
+
+<ParamField path="constraint" type="JPH_SliderConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="velocity" type="float">
+  Target velocity in meters/second
+</ParamField>
+
+#### JPH_SliderConstraint_GetTargetVelocity
+
+```c
+float JPH_SliderConstraint_GetTargetVelocity(JPH_SliderConstraint* constraint);
+```
+
+Gets the target velocity.
+
+#### JPH_SliderConstraint_SetTargetPosition
+
+```c
+void JPH_SliderConstraint_SetTargetPosition(
+    JPH_SliderConstraint* constraint,
+    float position
+);
+```
+
+Sets the target position for position motor mode.
+
+<ParamField path="constraint" type="JPH_SliderConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="position" type="float">
+  Target position in meters
+</ParamField>
+
+#### JPH_SliderConstraint_GetTargetPosition
+
+```c
+float JPH_SliderConstraint_GetTargetPosition(JPH_SliderConstraint* constraint);
+```
+
+Gets the target position.
+
+### Limits
+
+#### JPH_SliderConstraint_SetLimits
+
+```c
+void JPH_SliderConstraint_SetLimits(
+    JPH_SliderConstraint* constraint,
+    float inLimitsMin,
+    float inLimitsMax
+);
+```
+
+Sets the position limits for the slider.
+
+<ParamField path="constraint" type="JPH_SliderConstraint*">
+  The constraint to modify
+</ParamField>
+
+<ParamField path="inLimitsMin" type="float">
+  Minimum position in meters
+</ParamField>
+
+<ParamField path="inLimitsMax" type="float">
+  Maximum position in meters
+</ParamField>
+
+#### JPH_SliderConstraint_GetLimitsMin
+
+```c
+float JPH_SliderConstraint_GetLimitsMin(JPH_SliderConstraint* constraint);
+```
+
+Gets the minimum position limit.
+
+#### JPH_SliderConstraint_GetLimitsMax
+
+```c
+float JPH_SliderConstraint_GetLimitsMax(JPH_SliderConstraint* constraint);
+```
+
+Gets the maximum position limit.
+
+#### JPH_SliderConstraint_HasLimits
+
+```c
+bool JPH_SliderConstraint_HasLimits(JPH_SliderConstraint* constraint);
+```
+
+Checks if the slider has position limits enabled.
+
+#### JPH_SliderConstraint_GetLimitsSpringSettings
+
+```c
+void JPH_SliderConstraint_GetLimitsSpringSettings(
+    JPH_SliderConstraint* constraint,
+    JPH_SpringSettings* result
+);
+```
+
+Gets the spring settings for position limits.
+
+#### JPH_SliderConstraint_SetLimitsSpringSettings
+
+```c
+void JPH_SliderConstraint_SetLimitsSpringSettings(
+    JPH_SliderConstraint* constraint,
+    JPH_SpringSettings* settings
+);
+```
+
+Sets the spring settings for position limits.
+
+### Diagnostics
+
+#### JPH_SliderConstraint_GetTotalLambdaPosition
+
+```c
+void JPH_SliderConstraint_GetTotalLambdaPosition(
+    const JPH_SliderConstraint* constraint,
+    float position[2]
+);
+```
+
+Gets the total positional Lagrange multiplier (constraint force for 2 locked axes).
+
+#### JPH_SliderConstraint_GetTotalLambdaPositionLimits
+
+```c
+float JPH_SliderConstraint_GetTotalLambdaPositionLimits(
+    const JPH_SliderConstraint* constraint
+);
+```
+
+Gets the Lagrange multiplier for position limits.
+
+#### JPH_SliderConstraint_GetTotalLambdaRotation
+
+```c
+void JPH_SliderConstraint_GetTotalLambdaRotation(
+    const JPH_SliderConstraint* constraint,
+    JPH_Vec3* result
+);
+```
+
+Gets the total rotational Lagrange multiplier (constraint torque).
+
+#### JPH_SliderConstraint_GetTotalLambdaMotor
+
+```c
+float JPH_SliderConstraint_GetTotalLambdaMotor(
+    const JPH_SliderConstraint* constraint
+);
+```
+
+Gets the Lagrange multiplier for the motor.
+
+## Example
+
+```c
+// Create a piston mechanism
+JPH_Body* cylinder = /* ... static body ... */;
+JPH_Body* piston = /* ... dynamic body ... */;
+
+// Initialize constraint settings
+JPH_SliderConstraintSettings settings;
+JPH_SliderConstraintSettings_Init(&settings);
+
+// Configure slider
+settings.space = JPH_ConstraintSpace_WorldSpace;
+settings.autoDetectPoint = true;
+
+JPH_Vec3 sliderAxis = { 0, 1, 0 };  // Y-axis sliding
+JPH_SliderConstraintSettings_SetSliderAxis(&settings, &sliderAxis);
+
+// Set limits: piston can move 0.5 meters
+settings.limitsMin = 0.0f;
+settings.limitsMax = 0.5f;
+
+// Add friction
+settings.maxFrictionForce = 10.0f;
+
+// Configure motor for powered movement
+settings.motorSettings.springSettings.mode = JPH_SpringMode_FrequencyAndDamping;
+settings.motorSettings.springSettings.frequencyOrStiffness = 5.0f;
+settings.motorSettings.springSettings.damping = 1.0f;
+settings.motorSettings.minForceLimit = -1000.0f;
+settings.motorSettings.maxForceLimit = 1000.0f;
+
+// Create the constraint
+JPH_SliderConstraint* slider = JPH_SliderConstraint_Create(
+    &settings,
+    cylinder,
+    piston
+);
+
+JPH_PhysicsSystem_AddConstraint(physicsSystem, (JPH_Constraint*)slider);
+
+// Activate motor to extend piston
+JPH_SliderConstraint_SetMotorState(slider, JPH_MotorState_Position);
+JPH_SliderConstraint_SetTargetPosition(slider, 0.5f);  // Extend fully
+
+// Later: Retract piston
+JPH_SliderConstraint_SetTargetPosition(slider, 0.0f);
+```
+
+## See Also
+
+- [Hinge Constraint](/api/constraints/hinge) - Rotational joint
+- [Six DOF Constraint](/api/constraints/six-dof) - Full 6-axis control
+- [Distance Constraint](/api/constraints/distance) - Distance limits
